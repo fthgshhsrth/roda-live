@@ -8,7 +8,8 @@ export function placeProjectedBubble(anchor, w, h, obstacles, placed, bounds) {
   if (y < bounds.minY) break;
   for (const dx of [0, -w * .65, w * .65, -w * 1.15, w * 1.15]) {
    const box = {x: Math.max(margin, Math.min(right - w, anchor.x - w / 2 + dx)), y, w, h};
-   if (y + h <= bounds.maxY && !obstacles.some(o => overlaps(box, o)) && !placed.some(o => overlaps(box, o))) return box;
+   const padded={x:box.x-4,y:box.y-4,w:w+8,h:h+8};
+   if (y + h <= bounds.maxY && !obstacles.some(o => overlaps(padded, o)) && !placed.some(o => overlaps(padded, o))) return box;
   }
  }
  return null;

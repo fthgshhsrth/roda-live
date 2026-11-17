@@ -8,10 +8,13 @@ import {captureProfile} from './capture-profile.js';
 import {renderGiftCatalog} from './gift-catalog.js';
 import {coupleWaltzPose,floorWaltzPosition} from './waltz.js';
 import {addWeddingDecor} from './wedding-decor.js';
+import {addClubRoom} from './club-room.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
+const sourceMode=location.pathname.startsWith('/overlay/')||new URLSearchParams(location.search).has('source');
 document.body.classList.toggle('preview', preview);
+document.body.classList.toggle('source-mode',sourceMode);
 let state = {settings: {speed: 1, comments: true}, people: [], music: {}, log: []};
 let offset = 0, elapsed = 0, frame = 0, lastTick = performance.now(), lastRender = 0;
 let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0,resetUntil=0;
@@ -75,6 +78,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.35;
 renderer.shadowMap.enabled = !preview; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
+const clubRoom=addClubRoom(scene);clubRoom.visible=sourceMode;
 const camera = new THREE.PerspectiveCamera(38, 1, .1, 180);
 let director = new CameraDirector(performance.now());
 const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0, 1, -2.5);
@@ -128,7 +132,7 @@ function resize() {
   keyLight.shadow.mapSize.set(profile.shadowSize,profile.shadowSize);
   if(keyLight.shadow.map){keyLight.shadow.map.dispose();keyLight.shadow.map=null;}
   camera.aspect = bounds.width / bounds.height;
-  const distance = Math.max(31, 28 / camera.aspect);
+  const distance = sourceMode?Math.max(27,23/camera.aspect):Math.max(31,28/camera.aspect);
   overviewPosition.set(1, distance * .64, distance * .83-2.5);
   if (!cameraInitialized) {camera.position.copy(overviewPosition); cameraAim.copy(overviewAim); cameraInitialized = true;}
   camera.lookAt(cameraAim); camera.updateProjectionMatrix();
@@ -172,6 +176,7 @@ function updateState(next) {
   }
   state = next; offset = next.serverTime - Date.now(); $('offline').hidden = true;
   document.body.classList.toggle('transparent', !!next.settings.transparent);
+  clubRoom.visible=sourceMode&&!next.settings.transparent;
   const defaultTitle = !next.settings.title || next.settings.title === 'A RODA É SUA';
   $('sceneTitle').textContent = defaultTitle ? 'ARRAIÁ DAS BARATAS' : next.settings.title;
   $('sceneSubtitle').textContent = next.settings.subtitle === 'Mande uma rosa e entre na roda!' ? 'Uma rosa. Uma barata. Um show à parte.' : next.settings.subtitle;
@@ -200,7 +205,11 @@ function updateState(next) {
   receivedSnapshot = true;
   if (seenEvents.size > 200) {seenEvents.clear(); next.log.forEach(event => seenEvents.add(event.id));}
 }
-const events = new EventSource('/events'); events.onmessage = e => updateState(JSON.parse(e.data)); events.onerror = () => $('offline').hidden = false;
+if(sourceMode){
+ const poll=async()=>{try{const r=await fetch('/api/state',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error();updateState(await r.json());}catch{$('offline').hidden=false;}finally{setTimeout(poll,750);}};void poll();
+}else{
+ const events = new EventSource('/events');events.onmessage=e=>updateState(JSON.parse(e.data));events.onerror=()=>$('offline').hidden=false;
+}
 function project(x, y, z) {
   const v = new THREE.Vector3(x, y, z).project(camera);
   return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2, visible: v.z >= -1 && v.z <= 1};
@@ -237,7 +246,7 @@ let projected = [], bubbleBoxes = [];
 function labelLayout(entries, now) {
   const w = innerWidth, h = innerHeight, obstacles = [], active = [],visibleEntries=[];
   const header=$('sceneTitle').getBoundingClientRect();
-  const bounds={width:w,minX:viewport.left+10,maxX:viewport.right-10,minY:header.bottom+16,maxY:viewport.bottom-15};
+  const bounds={width:w,minX:viewport.left+10,maxX:sourceMode?document.querySelector('.gift-sidebar').getBoundingClientRect().left-10:viewport.right-10,minY:header.bottom+16,maxY:viewport.bottom-15};
   if(Date.now()<toastUntil){const r=$('eventToast').getBoundingClientRect();obstacles.push({x:r.x-4,y:r.y-4,w:r.width+8,h:r.height+8});}
   for (const entry of entries) {
     const root = entry.model.root, scale = root.scale.x;
@@ -278,7 +287,7 @@ function labelLayout(entries, now) {
 }
 function draw(time) {
   requestAnimationFrame(draw);
-  if (time - lastRender < 1000 / (preview ? 24 : high ? 60 : 30)-.5) return;
+  if (time - lastRender < 1000 / (preview ? 24 : sourceMode?30:high?60:30)-.5) return;
   const dt = Math.max(0, (time - lastTick) / 1000); lastTick = time; lastRender = time;
   elapsed += dt * (state.settings.speed ?? 1); frame++;
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;

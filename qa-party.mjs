@@ -25,7 +25,7 @@ try{
  const evaluate=async expression=>{const r=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
  async function until(expression,timeout=20000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await sleep(100);}throw Error('Não confirmado: '+expression);}
  await cdp('Runtime.enable');await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:1080,height:1920,deviceScaleFactor:1,mobile:false});
- await cdp('Page.navigate',{url:'http://localhost:3011/overlay.html?quality=low'});
+ await cdp('Page.navigate',{url:'http://localhost:3011/overlay/festa?jogo=festa&source=1&quality=low'});
  await until('window.roda3D?.diagnostics().frames>2',60000);
  assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
  await until("[...document.querySelectorAll('.gift-icon img')].length===6&&[...document.querySelectorAll('.gift-icon img')].every(i=>i.complete&&i.naturalWidth>0)");
@@ -43,7 +43,7 @@ try{
  assert.equal(await evaluate("window.roda3D.scene.getObjectByName('Decoração do casamento').children.filter(o=>o.name.startsWith('Globo de luz')).length"),5);
  const initialGlobe=await evaluate("window.roda3D.scene.getObjectByName('Globo de luz 1').rotation.y");
  await until("window.roda3D.scene.getObjectByName('Globo de luz 1').rotation.y>"+initialGlobe);
- assert.ok(await evaluate("document.querySelector('.gift-sidebar').getBoundingClientRect().left>window.roda3D.renderer.domElement.getBoundingClientRect().right"));
+ assert.ok(await evaluate("document.body.classList.contains('source-mode')&&window.roda3D.renderer.domElement.getBoundingClientRect().width===innerWidth&&document.querySelector('.gift-sidebar').getBoundingClientRect().right<=innerWidth"));
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='band').length"),5);
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='dj').length"),1);
  const give=(user,giftName,coins)=>api('simulate',{user,giftName,coins});
@@ -73,7 +73,7 @@ try{
  await cdp('Emulation.setDeviceMetricsOverride',{width:1920,height:1080,deviceScaleFactor:1,mobile:false});
  await sleep(500);
  assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
- assert.ok(await evaluate("document.querySelector('.gift-sidebar').getBoundingClientRect().left>window.roda3D.renderer.domElement.getBoundingClientRect().right"));
+ assert.ok(await evaluate("window.roda3D.renderer.domElement.getBoundingClientRect().height===innerHeight&&document.querySelector('.gift-sidebar').getBoundingClientRect().right<=innerWidth"));
  const horizontal=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(root,'verificacao/overlay-horizontal.png'),Buffer.from(horizontal.data,'base64'));
  await give('Novo músico','Donut',30);await until("window.roda3D.characters.get('Novo músico')?.model.instrument==='accordion'");
  assert.equal(await evaluate("window.roda3D.characters.get('Sanfoneiro').person.stageResident||false"),false);

@@ -7,6 +7,7 @@ import {startDownload, executable as toolPath} from './media.js';
 import {activate, control} from './music.js';
 import {fresh,defaults,gift,giftPrice,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
+import {createPublicSource} from './source-link.js';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=process.env.RODA_DATA_DIR?path.resolve(process.env.RODA_DATA_DIR):path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
 const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.schemaVersion=saved.schemaVersion||0;state.music.playing=false;}catch{}
@@ -14,6 +15,9 @@ upgradeState(state);
 let audioReady=false, activeDownload=null;
 state.music.queue=[];state.music.revision=state.music.revision||0;state.music.duration=state.music.duration||0;
 const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'Modo local · simulador disponível'},jobs=[];
+const port=Number(process.env.PORT)||3000;
+const publicSource=createPublicSource({root:ROOT,assetPort:port,getSnapshot:snapshot,onChange:send,
+ onMusic:b=>{control(state.music,b);save();send();}});
 let availableGifts=[],catalogStatus='offline';
 const giftCatalog=()=>resolveGiftCatalog(state.settings.rules,availableGifts,catalogStatus);
 async function loadGiftCatalog(conn=live,ticket=epoch){
@@ -28,7 +32,7 @@ async function loadGiftCatalog(conn=live,ticket=epoch){
 }
 function save(){fs.writeFileSync(stateFile,JSON.stringify(state,null,2));}
 function currentTrack(){const file=state.music.file;return file?{file,title:file.replace(/\s*\[[^\]]+\]\.mp3$/,'').replace(/\.mp3$/,''),url:'/music/'+encodeURIComponent(file)}:null;}
-function snapshot(){prune(state);return {...state,status,jobs,giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
+function snapshot(){prune(state);return {...state,status,jobs,sourceLink:publicSource.status(),giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
 function send(){const data='data: '+JSON.stringify(snapshot())+'\n\n';for(const res of clients)res.write(data);}
 function musicPosition(){return state.music.position+(state.music.playing?(Date.now()-state.music.changed)/1000:0);}
 function setStatus(phase,message){status={phase,message};send();}
@@ -82,6 +86,8 @@ const server=http.createServer(async(req,res)=>{
  case '/api/download':download(String(b.url||''));break;
  case '/api/download/cancel':activeDownload?.cancel();break;
  case '/api/music':control(state.music,b);break;
+ case '/api/source-link':await publicSource.start();break;
+ case '/api/source-link/stop':publicSource.stop();break;
  default:json(res,404,{error:'Endpoint desconhecido'});return;
  }save();send();json(res,200,{ok:true});return;}
  if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Método inválido'});return;}
@@ -97,7 +103,7 @@ const server=http.createServer(async(req,res)=>{
  res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'public, max-age=3600'});
  if(req.method==='HEAD')res.end();else fs.createReadStream(vendor).pipe(res);return;
  }
- const isMusic=url.pathname.startsWith('/music/'),base=isMusic?MUSIC:PUB,relative=decodeURIComponent(isMusic?url.pathname.slice(7):url.pathname==='/'?'index.html':url.pathname.slice(1)),file=path.resolve(base,relative);
+ const isMusic=url.pathname.startsWith('/music/'),base=isMusic?MUSIC:PUB,relative=decodeURIComponent(isMusic?url.pathname.slice(7):url.pathname==='/'?'index.html':['/overlay/festa','/overlay/link'].includes(url.pathname)?'overlay.html':url.pathname.slice(1)),file=path.resolve(base,relative);
  if(!file.startsWith(base+path.sep)||!(isMusic?file.endsWith('.mp3'):['.html','.js','.css','.webp'].includes(path.extname(file)))){json(res,403,{error:'Arquivo não permitido'});return;}
  let stat;try{stat=fs.statSync(file);}catch{json(res,404,{error:'Arquivo não encontrado'});return;}if(!stat.isFile()){json(res,404,{error:'Arquivo não encontrado'});return;}
  const headers={'Content-Type':mime[path.extname(file)]||'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-cache'};let start=0,end=stat.size-1,code=200;
@@ -108,4 +114,4 @@ const server=http.createServer(async(req,res)=>{
 setInterval(()=>{const before=state.people.length;prune(state);if(before!==state.people.length)save();send();},3000).unref();
 async function probe(name){return new Promise(resolve=>{const child=spawn(tool(name),[name==='yt-dlp'?'--version':'-version'],{windowsHide:true,shell:false});const timer=setTimeout(()=>{child.kill();resolve(false);},30000);child.on('error',()=>{clearTimeout(timer);resolve(false);});child.on('close',code=>{clearTimeout(timer);resolve(code===0);});});}
 Promise.all([probe('yt-dlp'),probe('ffmpeg'),probe('ffprobe')]).then(found=>{audioReady=found.every(Boolean);send();});
-const port=Number(process.env.PORT)||3000;server.listen(port,'127.0.0.1',()=>console.log('RODA LIVE · http://localhost:'+port+' · Cena: /overlay.html'));
+server.listen(port,'127.0.0.1',()=>console.log('RODA LIVE · http://localhost:'+port+' · Fonte Link: /overlay/festa?source=1&jogo=festa'));

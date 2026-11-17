@@ -25,7 +25,7 @@ if not exist "node_modules\three\build\three.module.js" (
  )
 )
 echo Painel: http://localhost:3000
-echo Cena OBS/Live Studio: http://localhost:3000/overlay.html
-echo Configure a fonte de navegador com 1080 x 1920.
+echo Fonte Link local: http://localhost:3000/overlay/festa?source=1
+echo No painel, gere o link HTTPS e configure a fonte Link com 1080 x 1920.
 node server.js
 pause

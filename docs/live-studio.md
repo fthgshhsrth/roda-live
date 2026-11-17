@@ -1,11 +1,16 @@
-# Overlay Full HD e catálogo da live
+# Fonte Link HTTPS para LIVE Studio
 
-O link vertical é `http://localhost:3000/overlay.html?studio=1&format=portrait#tiktok.studio`. Para horizontal, troque `portrait` por `landscape`. A composição acompanha o tamanho efetivo da fonte: 1080 × 1920 na vertical, 1920 × 1080 na horizontal. Os botões no painel copiam o endereço com a porta atual.
+No painel, use **Gerar link HTTPS** e **Copiar link vertical**. O endereço tem o formato `https://<endereco>.trycloudflare.com/overlay/<chave>?jogo=festa&source=1&format=portrait`. Em uma fonte Link do LIVE Studio, use resolução personalizada 1080 × 1920 e ative o áudio. Para horizontal, use o botão correspondente e 1920 × 1080.
 
-O modo padrão usa WebGL com antialiasing, buffer visando 1080 ou 1920 pixels de largura, limitado a 4096 pixels no lado maior e fator 3, sombras de 2048 pixels e até 60 FPS. O ritmo real depende da GPU. A prévia do painel tem resolução reduzida, 24 FPS e áudio silenciado. A fonte principal mantém seu próprio buffer; o modo leve usa 30 FPS e sem sombras.
+A composição usa o canvas em tela inteira e acompanha o tamanho efetivo da fonte. O cenário preenche o fundo; nomes e catálogo são renderizados diretamente no navegador. O alvo da fonte Link é 30 FPS, sem reduzir o buffer Full HD. O modo antigo de janela continua disponível, e a prévia do painel permanece mais leve e silenciosa. O resultado final ainda depende da GPU, da resolução da fonte e da codificação da transmissão.
 
-A festa ocupa a área à esquerda, com cabeçalho mínimo e os seis presentes em uma coluna compacta à direita. O catálogo não cobre o palco. O nome aparece apenas no personagem em foco. Comentários incluem o autor, ficam limitados aos dois mais recentes e procuram espaço livre sem cobrir personagens, avisos ou catálogo. Se não houver espaço, o balão não aparece.
+O túnel é temporário e precisa do servidor local ligado. A [documentação oficial de Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) informa que o endereço muda ao criar outro túnel, não há garantia de disponibilidade e SSE não é suportado. Por isso a saída Link consulta o estado periodicamente. Para produção com endereço permanente, é necessário configurar hospedagem ou túnel com domínio estável.
 
+O gateway usa uma chave de visualização e cookie HttpOnly/Secure. Publica apenas arquivos da cena, estado filtrado e a música atual. Não publica o painel, downloader, configurações ou a lista de downloads. Os únicos POSTs permitidos são metadados e término da faixa, que também validam a revisão da música. Ao fechar o servidor, o processo do túnel é encerrado pelo monitor de conexão.
+
+A instalação Windows usa [cloudflared 2026.11.1](https://github.com/cloudflare/cloudflared/releases/tag/2026.11.1), com SHA-256 `341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35`. O executável fica em tools/ e não entra no Git. O download é feito no primeiro uso se estiver ausente. O link gerado é exibido apenas no painel e não é gravado no repositório.
+
+O endereço local é `http://localhost:3000/overlay/festa?jogo=festa&source=1&format=portrait`. A mesma cena é usada na saída HTTPS. Mantenha apenas uma fonte emitindo áudio para evitar duplicação.
 ## Presentes corretos
 
 Ao conectar, o servidor consulta `fetchAvailableGifts()` do conector instalado e recebe os itens da sala. A correspondência exige ID selecionado ou nome equivalente exato, além do custo por unidade. O overlay usa nome, imagem e preço retornados, sem inventar IDs ou escolher apenas pelo preço. Itens não encontrados ficam indisponíveis; variantes ambíguas exigem seleção no painel. Na operação com catálogo confirmado, eventos usam apenas os IDs confirmados. O catálogo não é persistido entre conexões, para evitar usar itens de outra sala.

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "file": "launch-window.mjs",
-      "sha256": "07907df6c122d35b102f3efd85a75c627a86c5d5ae3f3ec83a0c873a2ec3b8ff",
+      "sha256": "0127403f9cc10ddc6a96efacbd1df4177349c69c913871b960f902230f9c7aef",
       "exports": [],
       "dependencies": [
         "node:fs",
@@ -88,6 +88,16 @@
       "dependencies": []
     },
     {
+      "file": "public/club-room.js",
+      "sha256": "2bd8d04f4d940c29ae898f7dab20187c0b6b890264ed66f094b5e03dc2480503",
+      "exports": [
+        "addClubRoom"
+      ],
+      "dependencies": [
+        "three"
+      ]
+    },
+    {
       "file": "public/gift-artwork.js",
       "sha256": "5159e028e7f08c07ad06f155870586e21c80bdd1b7d8a3f8a657c5946b1217a2",
       "exports": [
@@ -121,7 +131,7 @@
     },
     {
       "file": "public/layout.js",
-      "sha256": "297e8244149c206362bf7e48ac5417703d047815ea520f310dd4e801a397a7b2",
+      "sha256": "bf75e2c4db214e47213c0ad166236ae9eda17ecc0675fd40894be72278ab2150",
       "exports": [
         "overlaps",
         "placeProjectedBubble"
@@ -138,7 +148,7 @@
     },
     {
       "file": "public/panel.js",
-      "sha256": "2df960b45c1356111ec13e40f0f6eaaaf9e752b35edbb538d13014752c0cb793",
+      "sha256": "0bf93d963463ced45b71de162b16cfc3a34165f9667b187afdf2da16b2f4027e",
       "exports": [],
       "dependencies": [
         "public/party-layout.js",
@@ -171,7 +181,7 @@
     },
     {
       "file": "public/scene3d.js",
-      "sha256": "8e35a7a7ee6b542ce3ff5caa0574299cc1e03913b1e00c8b4af113e3fcf0d134",
+      "sha256": "81661c2fc29515879c0cd72f029d375772e56f83e7e936930ffb1847d31eed4d",
       "exports": [],
       "dependencies": [
         "three",
@@ -183,7 +193,8 @@
         "public/capture-profile.js",
         "public/gift-catalog.js",
         "public/waltz.js",
-        "public/wedding-decor.js"
+        "public/wedding-decor.js",
+        "public/club-room.js"
       ]
     },
     {
@@ -217,7 +228,7 @@
     },
     {
       "file": "qa-party.mjs",
-      "sha256": "525621e9aec997aa06624eb103a46ff2d039672bc6a7f89151177ff3c173fcf2",
+      "sha256": "757ccb174a9a2ff0902dba0e03f2250708d6acfd3df52c38ea4ff2e044852e8c",
       "exports": [],
       "dependencies": [
         "node:child_process",
@@ -257,7 +268,7 @@
     },
     {
       "file": "server.js",
-      "sha256": "f27d1675c953ed45261bde229deeb9eb054327077fe8992f104831cb1196201c",
+      "sha256": "c57d58beab107490f9bfebf0db05c21e67cfeef5baa8e0ec2d4219ec835c1411",
       "exports": [],
       "dependencies": [
         "node:http",
@@ -269,12 +280,30 @@
         "music.js",
         "wheel.js",
         "public/gift-catalog.js",
+        "source-link.js",
         "tiktok-live-connector"
       ]
     },
     {
+      "file": "source-link.js",
+      "sha256": "a0d21f84abc6a83a646ac9b9536cc76f5ac97623970c02e9003ec18ed9983d85",
+      "exports": [
+        "overlaySnapshot",
+        "createOverlayGateway",
+        "createPublicSource"
+      ],
+      "dependencies": [
+        "node:http",
+        "node:fs",
+        "node:path",
+        "node:url",
+        "node:crypto",
+        "node:child_process"
+      ]
+    },
+    {
       "file": "test.js",
-      "sha256": "890804cc855a3240dbef3701abed2034862b79794a8e33bb9b85de36a808c1b1",
+      "sha256": "f9ac362184673e6a2339bde6b6240a487d6a328d8b12138d789e6573a3e2da4a",
       "exports": [],
       "dependencies": [
         "node:test",
@@ -287,7 +316,9 @@
         "music.js",
         "public/gift-catalog.js",
         "public/capture-profile.js",
-        "public/waltz.js"
+        "public/waltz.js",
+        "node:http",
+        "source-link.js"
       ]
     },
     {

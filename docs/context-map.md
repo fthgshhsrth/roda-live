@@ -11,58 +11,63 @@ graph LR
   n4["public/backstage.js"]
   n5["public/camera-director.js"]
   n6["public/capture-profile.js"]
-  n7["public/gift-artwork.js"]
-  n8["public/gift-catalog.js"]
-  n9["public/instruments.js"]
-  n10["public/layout.js"]
-  n11["public/overlay.js"]
-  n12["public/panel.js"]
-  n13["public/party-layout.js"]
-  n14["public/roach.js"]
-  n15["public/scene3d.js"]
-  n16["public/waltz.js"]
-  n17["public/wedding-decor.js"]
-  n18["qa-camera.mjs"]
-  n19["qa-party.mjs"]
-  n20["qa-wedding.mjs"]
-  n21["qa.mjs"]
-  n22["scripts/context-map.mjs"]
-  n23["server.js"]
-  n24["test.js"]
-  n25["wheel.js"]
-  n3 --> n13
-  n8 --> n7
-  n11 --> n15
-  n12 --> n13
-  n12 --> n8
-  n14 --> n9
-  n14 --> n16
-  n15 --> n14
+  n7["public/club-room.js"]
+  n8["public/gift-artwork.js"]
+  n9["public/gift-catalog.js"]
+  n10["public/instruments.js"]
+  n11["public/layout.js"]
+  n12["public/overlay.js"]
+  n13["public/panel.js"]
+  n14["public/party-layout.js"]
+  n15["public/roach.js"]
+  n16["public/scene3d.js"]
+  n17["public/waltz.js"]
+  n18["public/wedding-decor.js"]
+  n19["qa-camera.mjs"]
+  n20["qa-party.mjs"]
+  n21["qa-wedding.mjs"]
+  n22["qa.mjs"]
+  n23["scripts/context-map.mjs"]
+  n24["server.js"]
+  n25["source-link.js"]
+  n26["test.js"]
+  n27["wheel.js"]
+  n3 --> n14
+  n9 --> n8
+  n12 --> n16
+  n13 --> n14
+  n13 --> n9
   n15 --> n10
-  n15 --> n5
-  n15 --> n13
-  n15 --> n4
-  n15 --> n6
-  n15 --> n8
-  n15 --> n16
   n15 --> n17
-  n18 --> n19
-  n20 --> n19
-  n21 --> n19
-  n23 --> n1
-  n23 --> n2
-  n23 --> n25
-  n23 --> n8
-  n24 --> n25
-  n24 --> n13
-  n24 --> n5
-  n24 --> n10
+  n16 --> n15
+  n16 --> n11
+  n16 --> n5
+  n16 --> n14
+  n16 --> n4
+  n16 --> n6
+  n16 --> n9
+  n16 --> n17
+  n16 --> n18
+  n16 --> n7
+  n19 --> n20
+  n21 --> n20
+  n22 --> n20
   n24 --> n1
   n24 --> n2
-  n24 --> n8
-  n24 --> n6
-  n24 --> n16
-  n25 --> n3
+  n24 --> n27
+  n24 --> n9
+  n24 --> n25
+  n26 --> n27
+  n26 --> n14
+  n26 --> n5
+  n26 --> n11
+  n26 --> n1
+  n26 --> n2
+  n26 --> n9
+  n26 --> n6
+  n26 --> n17
+  n26 --> n25
+  n27 --> n3
 ```
 
 Fluxos principais: presentes → server.js → wheel.js → party.js → public/party-layout.js; visual → scene3d.js → roach.js/instruments.js/backstage.js; câmera → camera-director.js.

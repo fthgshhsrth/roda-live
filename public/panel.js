@@ -25,6 +25,9 @@ function renderRules(){
 let peopleKey='',logKey='',jobKey='',giftKey='';
 function render(s){
  state=s;const ready=document.getElementById('audioStatus');if(ready){ready.textContent=s.audioReady?'● Downloader pronto · yt-dlp + FFmpeg':'○ Downloader precisa de yt-dlp + FFmpeg · veja INSTALAR-AUDIO.ps1';ready.style.color=s.audioReady?'#d6fb79':'#dab67a';}if(!settingsLoaded)loadSettings(s.settings);
+ const source=s.sourceLink||{phase:'offline',message:'Link HTTPS desligado'};
+ $('sourceURL').value=source.url||'';$('sourceStatus').textContent=source.message;
+ $('startSource').disabled=source.phase==='starting';$('stopSource').hidden=source.phase!=='online';
  const confirmed=(s.giftCatalog||[]).filter(g=>g.status==='verified').length;
  $('catalogSummary').textContent=s.catalogStatus==='ready'?confirmed+'/6 presentes confirmados. '+(s.giftCatalog||[]).filter(g=>g.status!=='verified').map(g=>giftActions[g.effect]+': '+(g.status==='ambiguous'?'selecione o item':'presente indisponível')).join(' · '):s.catalogStatus==='loading'?'Carregando catálogo automaticamente…':s.catalogStatus==='error'?'Falha no catálogo. Clique em Presentes da live para tentar novamente.':'Conecte a live para confirmar nomes, imagens, IDs e moedas automaticamente.';
  $('status').textContent=s.status.message;$('statusLed').style.background=s.status.phase==='online'?'#d6fb79':s.status.phase==='error'?'#ff8484':'#899578';
@@ -58,7 +61,10 @@ $('loadCatalog').onclick=action(async()=>{
  catalog=j.gifts;renderRules();toast('Catálogo carregado. Selecione os presentes e salve o mapa.');
 });
 for(const [id,orientation] of [['copyPortrait','portrait'],['copyLandscape','landscape']])$(id).onclick=action(async()=>{
- const url=location.origin+'/overlay.html?studio=1&format='+orientation+'#tiktok.studio';
+ const link=new URL(state?.sourceLink?.url||location.origin+'/overlay/festa?jogo=festa&source=1');link.searchParams.set('format',orientation);const url=link.href;
  try{await navigator.clipboard.writeText(url);toast('Link copiado. Fonte Link: '+(orientation==='portrait'?'1080 × 1920':'1920 × 1080')+'.');}
  catch{window.prompt('Copie o link da fonte:',url);}
 });
+$('startSource').onclick=action(async()=>{await api('source-link');render(await(await fetch('/api/state')).json());toast('Link HTTPS pronto. Copie o link vertical para o LIVE Studio.');});
+$('stopSource').onclick=action(()=>api('source-link/stop'));
+$('sourceURL').onclick=()=>{$('sourceURL').select();};

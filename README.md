@@ -52,15 +52,19 @@ Cena: http://localhost:3000/overlay.html
 
 No Windows, **INICIAR.bat** mantém o servidor no terminal. **ABRIR-LIVE.bat** inicia o servidor se necessário e abre a cena em uma janela dedicada de Edge/Chrome, sem barra de endereço.
 
-## TikTok Live Studio
-1. No painel, use **Copiar link vertical** ou **Copiar link horizontal**.
-2. No LIVE Studio, adicione uma fonte **Link / Navegador**, se disponível na sua versão, e cole o endereço.
-3. Defina a fonte em **1080 × 1920** para vertical ou **1920 × 1080** para horizontal. Ative o som apenas nesta fonte.
-4. O overlay usa antialiasing, sombras de alta resolução e buffer Full HD por padrão; mantém os seis presentes em uma coluna compacta à direita, com imagens originais do TikTok e mostra apenas o nome em destaque e até dois comentários. As asas, antenas e os quatro membros são verificados no teste de navegador.
+## TikTok Live Studio — fonte Link HTTPS
+1. Execute **INICIAR.bat** e abra o painel em http://localhost:3000.
+2. Clique em **Gerar link HTTPS** e depois em **Copiar link vertical**.
+3. No LIVE Studio, adicione uma fonte **Link**, cole o endereço e ative a resolução personalizada **1080 × 1920**, com o som da fonte ligado. Para horizontal, copie o link horizontal e use **1920 × 1080**.
+4. Ajuste a fonte à tela preservando a proporção. Não amplie uma fonte criada em 800 × 600 para preencher uma transmissão vertical.
 
-Se sua versão não aceitar a fonte local, **ABRIR-LIVE.bat** abre a janela dedicada em 1080 × 1920 (o Windows pode limitar ao tamanho do monitor). Use Captura de janela → **BARATAS NA PISTA**. Aumentar o buffer 3D não aumenta a resolução de uma janela capturada pequena; prefira a fonte Link no tamanho de saída. Não use o iframe da prévia como fonte.
+A saída usa canvas em tela inteira, cenário cobrindo o quadro, antialiasing e 30 FPS como alvo na fonte Link. O painel conserva a prévia silenciosa. A composição se adapta ao tamanho real da fonte, com o catálogo sobreposto à direita e comentários procurando espaços livres.
 
-A qualidade de codificação, bitrate e resolução da transmissão são controlados pelo LIVE Studio; o projeto não muda essas configurações. A tecla F alterna tela cheia; o modo leve reduz o custo da GPU. Veja [configuração e fontes oficiais](docs/live-studio.md).
+O botão cria um endereço HTTPS temporário do Cloudflare, sem exigir conta ou domínio. O link só funciona enquanto o servidor estiver ligado e muda quando você gerar outro. O serviço não oferece garantia de disponibilidade; para uma URL permanente é necessária hospedagem ou um túnel com domínio estável. O projeto baixa cloudflared 2026.11.1 no Windows e verifica o SHA-256 antes da primeira execução. Em outro sistema, defina CLOUDFLARED_PATH para um executável instalado.
+
+Somente a cena e a faixa em reprodução são publicadas pelo gateway. Painel, conexão TikTok, configurações e downloader permanecem locais. O link HTTPS usa consultas de estado, pois Quick Tunnels não suportam SSE. A cena pode enviar apenas os eventos de duração e fim da faixa; comandos de reprodução ficam no painel.
+
+O endereço local equivalente é `http://localhost:3000/overlay/festa?jogo=festa&source=1&format=portrait`. **ABRIR-LIVE.bat** continua disponível para prévia em janela. A qualidade de codificação e a resolução da transmissão continuam sendo controladas pelo LIVE Studio. Veja [configuração e limites](docs/live-studio.md).
 ## Música
 Instale yt-dlp, FFmpeg e ffprobe no PATH ou coloque os executáveis em tools/. INSTALAR-AUDIO.ps1 auxilia via winget no Windows.
 

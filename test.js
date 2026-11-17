@@ -9,6 +9,8 @@ import {activate,control} from './music.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 import {captureProfile} from './public/capture-profile.js';
 import {DANCE_BPM,waltzPose,floorWaltzPosition,coupleWaltzPose} from './public/waltz.js';
+import http from 'node:http';
+import {createOverlayGateway} from './source-link.js';
 const send=(s,id,name,coins,now=100,extra={})=>gift(s,{uniqueId:id,nickname:id,giftName:name,diamondCount:coins,...extra},now);
 test('rosa unitária entra; combo de dez rosas não vira noiva',()=>{
  const s=fresh();send(s,'Ana','Rose',1);send(s,'Ana','Rose',1,200,{repeatCount:10});
@@ -84,7 +86,7 @@ test('câmera prioriza noivo e papéis recentes, depois volta à visão geral',(
 test('bolhas respeitam corpos e limites em janelas diferentes',()=>{
  for(const width of [360,720,1920]){
   const bodies=[{x:width*.4,y:350,w:80,h:180}],bounds={width,minY:100,maxY:650};
-  const box=placeProjectedBubble({x:width*.5,y:350},150,60,bodies,[],bounds);assert.ok(box);assert.ok(!overlaps(box,bodies[0]));assert.ok(box.x>=10);
+  const box=placeProjectedBubble({x:width*.5,y:350},150,60,bodies,[],bounds);assert.ok(box);assert.ok(!overlaps({...box,x:box.x-4,y:box.y-4,w:box.w+8,h:box.h+8},bodies[0]));assert.ok(box.x>=10);
  }
 });
 test('downloader aceita vídeos HTTPS e não executa protocolos locais',()=>{
@@ -186,4 +188,21 @@ test('baratas de ambiente dão volume sem virar doadores, eventos ou participant
  for(let i=0;i<AMBIENT_GUEST_COUNT;i++)send(s,'p'+i,'Rose',1);
  assert.equal(sceneCast(s).filter(p=>p.ambient).length,0);
  clearParty(s);assert.equal(sceneCast(s).filter(p=>p.ambient).length,AMBIENT_GUEST_COUNT);
+});
+test('fonte HTTPS publica apenas a cena, protege os controles e filtra os dados privados',async()=>{
+ const asset=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html'});res.end('overlay de teste');});
+ await new Promise(r=>asset.listen(0,'127.0.0.1',r));
+ const s={...fresh(),serverTime:100,jobs:[{url:'privado'}],sourceLink:{url:'segredo'}},actions=[];
+ const gateway=createOverlayGateway({token:'qa-token',assetPort:asset.address().port,getSnapshot:()=>s,onMusic:data=>actions.push(data.action)});
+ gateway.setOrigin('https://source.example');await new Promise(r=>gateway.server.listen(0,'127.0.0.1',r));
+ const base='http://127.0.0.1:'+gateway.server.address().port,headers={Cookie:'roda_view=qa-token'};
+ try{
+  assert.equal((await fetch(base+'/api/state')).status,403);
+  const entry=await fetch(base+'/overlay/qa-token?jogo=festa');assert.equal(entry.status,200);assert.match(entry.headers.get('set-cookie'),/HttpOnly; Secure/);assert.equal(await entry.text(),'overlay de teste');
+  const state=await(await fetch(base+'/api/state',{headers})).json();assert.equal(state.jobs,undefined);assert.equal(state.sourceLink,undefined);assert.equal(state.settings.rules,undefined);
+  for(const route of ['/','/index.html','/panel.js','/api/connect','/api/download','/events'])assert.equal((await fetch(base+route,{headers})).status,403,route);
+  const post=(action,origin='https://source.example')=>fetch(base+'/api/music',{method:'POST',headers:{...headers,'Content-Type':'application/json',Origin:origin},body:JSON.stringify({action})});
+  assert.equal((await post('stop')).status,403);assert.equal((await post('ended','https://other.example')).status,403);
+  assert.equal((await post('ended')).status,200);assert.deepEqual(actions,['ended']);
+ }finally{gateway.server.closeAllConnections();gateway.server.close();asset.closeAllConnections();asset.close();}
 });

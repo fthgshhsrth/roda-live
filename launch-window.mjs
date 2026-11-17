@@ -21,7 +21,7 @@ const browsers = [
 ];
 const browser = browsers.find(p => fs.existsSync(p));
 if (!browser) throw Error('Edge ou Chrome não encontrado. Abra ' + base + '/overlay.html e pressione F.');
-const window = spawn(browser, ['--app=' + base + '/overlay.html?window=1&studio=1&format=portrait', '--window-size=1080,1920',
+const window = spawn(browser, ['--app=' + base + '/overlay/festa?jogo=festa&source=1&format=portrait', '--window-size=1080,1920',
   '--force-device-scale-factor=1','--disable-background-timer-throttling','--disable-renderer-backgrounding',
   '--autoplay-policy=no-user-gesture-required', '--no-first-run', '--no-default-browser-check',
   '--user-data-dir=' + path.join(root, 'tools', 'live-window')], {detached: true, stdio: 'ignore', windowsHide: false});
