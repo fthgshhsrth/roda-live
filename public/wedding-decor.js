@@ -60,9 +60,26 @@ export function addWeddingDecor(scene){
   add(group,new THREE.CylinderGeometry(.009,.009,1.7,5),gold,position[0],position[1]+1.25,position[2]);
   globes.push({globe,glow});
  }
- const lights=[new THREE.PointLight('#ffd5a0',24,17),new THREE.PointLight('#d7b4e8',20,17)];
- lights[0].position.set(-4,5,1);lights[1].position.set(5,5,-3);lights.forEach(light=>group.add(light));
+ const lights=['#64b9ff','#e57dd5'].map((color,i)=>{
+  const light=new THREE.SpotLight(color,55,24,.38,.7,1.5);light.name='Luz de balada '+(i+1);light.position.set(i?5:-5,6.3,-4);group.add(light,light.target);
+  const material=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.045,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+  const beam=new THREE.Mesh(new THREE.ConeGeometry(1,1,24,1,true),material);beam.name='Feixe de balada '+(i+1);beam.frustumCulled=false;group.add(beam);
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(1.7,32),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.1,depthWrite:false,blending:THREE.AdditiveBlending}));
+  pool.rotation.x=-Math.PI/2;pool.name='Luz no chão '+(i+1);group.add(pool);
+  return {light,beam,pool};
+ });
+ const beamDirection=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0);
  return {cake,globes,animate(time,beat){
   globes.forEach(({globe,glow},i)=>{globe.rotation.y=time*(.12+i*.012);glow.material.opacity=.65+Math.sin(time*.7+i)*.08+beat*.06;});
+  lights.forEach(({light,beam,pool},i)=>{
+   const phase=time*.22+i*Math.PI;
+   light.target.position.set(Math.sin(phase)*4.7,.02,Math.cos(phase*.8)*3.6);
+   light.color.setHSL((time*.012+i*.34+.55)%1,.65,.62);
+   beamDirection.subVectors(light.target.position,light.position);const length=beamDirection.length();
+   beam.position.copy(light.position).addScaledVector(beamDirection,.5);
+   beam.quaternion.setFromUnitVectors(down,beamDirection.normalize());const radius=length*Math.tan(light.angle*.8);beam.scale.set(radius,length,radius);
+   beam.material.color.copy(light.color);beam.material.opacity=.035+beat*.025;
+   pool.position.copy(light.target.position);pool.material.color.copy(light.color);pool.material.opacity=.08+beat*.06;
+  });
  }};
 }

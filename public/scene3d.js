@@ -279,7 +279,7 @@ function labelLayout(entries, now) {
 function draw(time) {
   requestAnimationFrame(draw);
   if (time - lastRender < 1000 / (preview ? 24 : high ? 60 : 30)-.5) return;
-  const dt = Math.min(.08, (time - lastTick) / 1000); lastTick = time; lastRender = time;
+  const dt = Math.max(0, (time - lastTick) / 1000); lastTick = time; lastRender = time;
   elapsed += dt * (state.settings.speed ?? 1); frame++;
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;
   if (analyser && !audio.paused) { analyser.getByteFrequencyData(frequency); beat = frequency.slice(0, 10).reduce((a, b) => a + b, 0) / 2550; }
@@ -290,7 +290,7 @@ function draw(time) {
     const radius = counts.length === 1 ? 5.2 : [6.6,4.9][ring];
     for (let i = 0; i < count; i++) {
       const entry = dancers[index++]; if (!entry) continue;
-      const pose=floorWaltzPosition(i,count,radius,elapsed);
+      const pose=floorWaltzPosition(i,count,radius,elapsed,{solo:!!entry.person.ambient});
       entry.model.root.position.set(pose.x,.03,pose.z);
       const baseScale = .83 + (entry.model.seed % 4) * .065;
       entry.model.root.scale.setScalar(baseScale * (n > 30 ? .68 : n > 12 ? .85 : 1));
@@ -325,4 +325,4 @@ window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frame
     position: camera.position.toArray(), aim: cameraAim.toArray(), distance: camera.position.distanceTo(cameraAim),
     greeting: characters.get(shot.targetId)?.model.isGreeting || false}})};
 $('scene').addEventListener('webglcontextlost', e => { e.preventDefault(); $('boot').hidden = false; $('boot').textContent = 'A GPU interrompeu a cena. Reabra a janela ou use o modo leve.'; });
-reconcile(preview?demo:[]); resize(); $('boot').hidden = true; requestAnimationFrame(draw);
+reconcile(sceneCast(state,preview?demo:[])); resize(); $('boot').hidden = true; requestAnimationFrame(draw);

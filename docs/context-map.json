@@ -39,7 +39,7 @@
     },
     {
       "file": "party.js",
-      "sha256": "bceb45fa94be300d61a9688d2b16debfe1215bc269aff1918e6714f3e17bde8d",
+      "sha256": "de544f61c786ba9d11890c6a6c4ddea8d7f5b9d8e114b3c88ac60ba548fda7e5",
       "exports": [
         "rules",
         "defaults",
@@ -89,7 +89,7 @@
     },
     {
       "file": "public/gift-artwork.js",
-      "sha256": "33df0c6b046b47af8eb949673aada57882bc14ab839b7bbf29b6b556cc5fd129",
+      "sha256": "5159e028e7f08c07ad06f155870586e21c80bdd1b7d8a3f8a657c5946b1217a2",
       "exports": [
         "giftArtwork"
       ],
@@ -97,7 +97,7 @@
     },
     {
       "file": "public/gift-catalog.js",
-      "sha256": "3abd800df8deae3a4dd0e6246db93169253e523affb144d2e7ac80e470c53002",
+      "sha256": "5782cfa700ef9c7e0d636c41236183edfcd87f32521d01d901d0a59d5bedc9a6",
       "exports": [
         "giftActions",
         "sanitizeGifts",
@@ -147,9 +147,10 @@
     },
     {
       "file": "public/party-layout.js",
-      "sha256": "ba1b1126782812e8f54aa9f676afc34f897f27b15bbf139d12c747ba85754458",
+      "sha256": "4ce93cca2ba5890095f29429a56700517ef40adbc3a033dec6ef56acb86f5d84",
       "exports": [
         "BAND",
+        "AMBIENT_GUEST_COUNT",
         "partyRole",
         "sceneCast"
       ],
@@ -170,7 +171,7 @@
     },
     {
       "file": "public/scene3d.js",
-      "sha256": "c48cdf522464e5c9ac4e0f6dc6ef281f3701fccb5fc6c01359aba90098b92ef1",
+      "sha256": "8e35a7a7ee6b542ce3ff5caa0574299cc1e03913b1e00c8b4af113e3fcf0d134",
       "exports": [],
       "dependencies": [
         "three",
@@ -187,7 +188,7 @@
     },
     {
       "file": "public/waltz.js",
-      "sha256": "49e949f194e8e8172014960357fca56fd993a7e361f8a3c0bd36f806de805d2d",
+      "sha256": "9a67484dc769e6587068c31dab32b42e5b47c879078054f45858455cc82eee8f",
       "exports": [
         "DANCE_BPM",
         "waltzPose",
@@ -198,7 +199,7 @@
     },
     {
       "file": "public/wedding-decor.js",
-      "sha256": "d0a1c1a70e841610b2e176493aa3b34deade0e4c591d8fa8990b5010155cbc79",
+      "sha256": "791ff2d2b16b25273d7255d7d59a2822859dd9570068a3a40136eb024120aa55",
       "exports": [
         "addWeddingDecor"
       ],
@@ -216,7 +217,7 @@
     },
     {
       "file": "qa-party.mjs",
-      "sha256": "0fb48c7ceea65a0fdc1b4a235e17d4223b75507c35ee0887dc7b1c87c10e8bcf",
+      "sha256": "525621e9aec997aa06624eb103a46ff2d039672bc6a7f89151177ff3c173fcf2",
       "exports": [],
       "dependencies": [
         "node:child_process",
@@ -256,7 +257,7 @@
     },
     {
       "file": "server.js",
-      "sha256": "f6e8c42a3fba208391a6aa79d2ab827ab0857ee24804a25460de7a400f6ebb0b",
+      "sha256": "f27d1675c953ed45261bde229deeb9eb054327077fe8992f104831cb1196201c",
       "exports": [],
       "dependencies": [
         "node:http",
@@ -273,7 +274,7 @@
     },
     {
       "file": "test.js",
-      "sha256": "608934929d79ae1364498d6149a8ff73b1bd37dbad54bfb6755712399443ba72",
+      "sha256": "890804cc855a3240dbef3701abed2034862b79794a8e33bb9b85de36a808c1b1",
       "exports": [],
       "dependencies": [
         "node:test",

@@ -2,7 +2,7 @@ import {partyRole} from './public/party-layout.js';
 export {partyRole};
 export const rules=[
  {label:'Entrar · Rosa',icon:'🌹',names:'Rose,Rosa',ids:'5655',coins:1,effect:'join'},
- {label:'Noivo · Mãos coração',icon:'🫶',names:'Mãos fazendo coração,Hand Heart,Heart Hands,Mãos em coração',ids:'',coins:null,effect:'marry'},
+ {label:'Noivo · Mãos Fazendo Coração',icon:'🫰',names:'Mãos Fazendo Coração,Finger Heart,Coração de Dedo',ids:'',coins:5,effect:'marry'},
  {label:'Noiva · Rosa 10',icon:'👰',names:'Rosa,Rose,Rosa de 10,Rosa 10',ids:'',coins:10,effect:'bride'},
  {label:'Banda · Rosquinha',icon:'🍩',names:'Rosquinha,Doughnut,Donut,Doughnuts',ids:'',coins:30,effect:'band'},
  {label:'DJ · Boné',icon:'🧢',names:'Boné,Cap,Baseball Cap',ids:'',coins:99,effect:'dj'},
@@ -11,14 +11,14 @@ export const rules=[
 export const defaults={title:'A RODA É SUA',subtitle:'Mande uma rosa e entre na roda!',duration:15,speed:1,capacity:24,comments:true,transparent:false,rules};
 const emptyCouple=()=>({groomId:null,brideId:null,since:null});
 const emptyStage=()=>({djId:null,bandIds:[null,null,null,null,null],bandNext:0});
-export function fresh(){return {schemaVersion:5,partyEpoch:0,couple:emptyCouple(),stage:emptyStage(),
+export function fresh(){return {schemaVersion:6,partyEpoch:0,couple:emptyCouple(),stage:emptyStage(),
  settings:structuredClone(defaults),people:[],log:[],roses:0,seenGiftIds:[],
  music:{file:null,playing:false,position:0,volume:.65,changed:Date.now(),revision:0,duration:0,queue:[]}};}
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export function identity(e){const u=e.user||e;return {id:String(u.uniqueId||u.userId||'visitante').slice(0,100),name:String(u.nickname||u.uniqueId||'Visitante').slice(0,40)};}
-export function giftPrice(e){const value=e.diamondCount??e.giftDetails?.diamondCount??e.gift?.diamond_count;return value==null?null:Number(value);}
+export function giftPrice(e){const value=e.diamondCount??e.giftDetails?.diamondCount??e.extendedGiftInfo?.diamond_count??e.extendedGiftInfo?.diamondCount??e.gift?.diamond_count;return value==null?null:Number(value);}
 export function matchGift(s,e,ruleSet=s.settings.rules){
- const name=norm(e.giftName||e.giftDetails?.giftName),price=giftPrice(e);
+ const name=norm(e.giftName||e.giftDetails?.giftName||e.extendedGiftInfo?.name||e.gift?.name),price=giftPrice(e);
  const byId=ruleSet.filter(r=>String(r.ids||'').split(',').some(id=>id.trim()&&id.trim()===String(e.giftId)));
  const byName=ruleSet.filter(r=>!r.catalogBound&&r.names.split(',').some(alias=>norm(alias)===name));
  const candidates=byId.length?byId:byName;
@@ -103,6 +103,7 @@ export function upgradeState(s){
   return r;
  });
  s.settings.rules=s.settings.rules.map(r=>r.effect==='reset'&&r.names.includes('Serenata da Arraia')&&!r.names.includes('Ray Serenade')?{...r,names:r.names+',Ray Serenade'}:r);
+ if((s.schemaVersion||0)<6)s.settings.rules=s.settings.rules.map(r=>r.effect==='marry'?structuredClone(rules.find(d=>d.effect==='marry')):r);
  for(const p of s.people)p.joinedAt??=p.lastGiftAt||0;
- s.schemaVersion=5;return s;
+ s.schemaVersion=6;return s;
 }

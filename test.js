@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fresh,gift,comment,prune,settings,upgradeState,partyRole,clearParty,removePerson} from './wheel.js';
-import {sceneCast,BAND} from './public/party-layout.js';
+import {sceneCast,BAND,AMBIENT_GUEST_COUNT} from './public/party-layout.js';
 import {CameraDirector} from './public/camera-director.js';
 import {placeProjectedBubble,overlaps} from './public/layout.js';
 import {videoURL,downloadArgs} from './media.js';
@@ -19,12 +19,13 @@ test('rosa de dez moedas escolhe noiva sem colidir com rosa comum',()=>{
  assert.equal(send(s,'Bia','Rosa',99),null);assert.equal(send(s,'Bia','Rosa',undefined),null);
 });
 test('noivo usa mãos coração; o Anel antigo não concede papel',()=>{
- const s=fresh();send(s,'A','Mãos fazendo coração',null);assert.equal(s.couple.groomId,'A');
+ const s=fresh();send(s,'A','Mãos Fazendo Coração',5);assert.equal(s.couple.groomId,'A');
  assert.equal(send(s,'B','Anel',30),null);assert.equal(send(s,'B','Heart Me',1,200),null);
- send(s,'B','Hand Heart',100,300);assert.equal(s.couple.groomId,'B');assert.equal(partyRole(s,'A'),null);
+ assert.equal(send(s,'B','Hand Heart',100),null);assert.equal(send(s,'B','Mãos em Coração',100),null);assert.equal(send(s,'B','Heart Hands',5),null);
+ send(s,'B','Finger Heart',5,300);assert.equal(s.couple.groomId,'B');assert.equal(partyRole(s,'A'),null);
 });
 test('cada doador tem um papel; noiva e noivo são disputados separadamente',()=>{
- const s=fresh();send(s,'A','Heart Hands',null);send(s,'B','Rosa',10);
+ const s=fresh();send(s,'A','Finger Heart',5);send(s,'B','Rosa',10);
  send(s,'C','Rosa',10,200);assert.equal(s.couple.groomId,'A');assert.equal(s.couple.brideId,'C');
  send(s,'A','Boné',99,300);assert.equal(s.couple.groomId,null);assert.equal(s.stage.djId,'A');
  send(s,'C','Rosquinha',30,400);assert.equal(s.couple.brideId,null);assert.equal(partyRole(s,'C').kind,'band');
@@ -36,7 +37,7 @@ test('banda tem cinco vagas e o sexto doador substitui a vaga mais antiga',()=>{
  send(s,'B5','Donut',30,300);assert.equal(s.people.filter(p=>p.id==='B5').length,1);assert.equal(s.stage.bandIds.filter(x=>x==='B5').length,1);
 });
 test('papéis continuam após vencer o tempo normal; substituídos retornam à roda',()=>{
- const s=fresh();send(s,'N','Heart Hands',null);send(s,'V','Rose',10);send(s,'DJ','Cap',99);send(s,'M','Donut',30);send(s,'P','Rose',1);
+ const s=fresh();send(s,'N','Finger Heart',5);send(s,'V','Rose',10);send(s,'DJ','Cap',99);send(s,'M','Donut',30);send(s,'P','Rose',1);
  prune(s,10000000);assert.equal(s.people.length,4);assert.equal(comment(s,{uniqueId:'DJ',comment:'oi'},10000000),true);
  send(s,'DJ2','Cap',99,10000001);assert.equal(partyRole(s,'DJ'),null);prune(s,20000000);assert.ok(!s.people.find(p=>p.id==='DJ'));
 });
@@ -51,7 +52,7 @@ test('combos incompletos e mensagens repetidas não reaplicam papéis',()=>{
  assert.equal(send(s,'A','Donut',30,300,{giftType:1,repeatEnd:true,msgId:'x'}),null);
 });
 test('serenata exige nome/ID correto e 2999 por unidade; reinicia toda a festa e áudio',()=>{
- const s=fresh();send(s,'N','Heart Hands',null);send(s,'V','Rose',10);send(s,'M','Donut',30);send(s,'D','Cap',99);
+ const s=fresh();send(s,'N','Finger Heart',5);send(s,'V','Rose',10);send(s,'M','Donut',30);send(s,'D','Cap',99);
  activate(s.music,'teste.mp3',100);s.music.volume=.4;const epoch=s.partyEpoch;
  assert.equal(send(s,'X','Rose',2999),null);
  assert.equal(send(s,'X','Serenata de arraia',1,200,{repeatCount:2999}),null);
@@ -68,7 +69,7 @@ test('migração instala mapa novo e mantém configurações; remover limpa o pa
  assert.throws(()=>settings({rules:[{effect:'reset',coins:99}]},s.settings));
 });
 test('cena contém cinco instrumentos, DJ e casal; nomes de doadores sem duplicatas',()=>{
- const s=fresh();assert.equal(sceneCast(s).length,8);assert.equal(BAND.length,5);
+ const s=fresh();assert.equal(sceneCast(s).length,8+AMBIENT_GUEST_COUNT);assert.equal(BAND.length,5);
  send(s,'A','Rose',1);send(s,'B','Donut',30);send(s,'C','Rose',10);send(s,'D','Cap',99);
  const cast=sceneCast(s);assert.equal(new Set(cast.map(p=>p.id)).size,cast.length);assert.equal(cast.filter(p=>p.stageRole==='band').length,5);
  assert.equal(cast.find(p=>p.id==='B').instrument,'accordion');assert.equal(cast.find(p=>p.id==='C').weddingRole,'bride');assert.equal(cast.find(p=>p.id==='D').instrument,'dj');
@@ -99,7 +100,7 @@ test('áudio protege contra eventos atrasados e controles inválidos',()=>{
 test('catálogo liga nome, imagem, ID e preço reais; não adivinha presentes pelo valor',()=>{
  const s=fresh(),gifts=sanitizeGifts([
   {id:5655,name:'Rose',diamond_count:1,image:{url_list:['https://example.com/rose.png']}},
-  {id:400,name:'Heart Me',diamond_count:1},{id:401,name:'Hand Heart',diamond_count:100},
+  {id:400,name:'Heart Me',diamond_count:1},{id:401,name:'Finger Heart',diamond_count:5},
   {id:402,name:'Outro presente',diamond_count:10},{id:403,name:'Doughnut',diamond_count:30},
   {id:404,name:'Cap',diamond_count:99},{id:405,name:'Serenata da Arraia',diamond_count:2999},
   {id:406,name:'Inválido',diamond_count:30,image:'javascript:bad'}
@@ -107,9 +108,9 @@ test('catálogo liga nome, imagem, ID e preço reais; não adivinha presentes pe
  const cards=resolveGiftCatalog(s.settings.rules,gifts,'ready'),bound=catalogRules(s.settings.rules,cards);
  assert.equal(cards.find(g=>g.effect==='marry').id,'401');assert.equal(cards.find(g=>g.effect==='bride').status,'unavailable');
  assert.equal(cards.find(g=>g.effect==='reset').name,'Serenata da Arraia');assert.equal(gifts.at(-1).image,'');
- assert.equal(gift(s,{uniqueId:'A',giftId:401,giftName:'nome localizado',diamondCount:100},100,bound)?.effect,'marry');
- assert.equal(gift(s,{uniqueId:'B',giftId:400,giftName:'Hand Heart',diamondCount:100},200,bound),null);
- assert.equal(gift(s,{uniqueId:'B',giftId:401,giftName:'Hand Heart',diamondCount:1},200,bound),null);
+ assert.equal(gift(s,{uniqueId:'A',giftId:401,giftName:'nome localizado',diamondCount:5},100,bound)?.effect,'marry');
+ assert.equal(gift(s,{uniqueId:'B',giftId:400,giftName:'Finger Heart',diamondCount:5},200,bound),null);
+ assert.equal(gift(s,{uniqueId:'B',giftId:401,giftName:'Finger Heart',diamondCount:1},200,bound),null);
  assert.equal(cards[0].image,'https://example.com/rose.png');
 });
 test('catálogo ambíguo exige seleção por ID; offline não afirma confirmação',()=>{
@@ -158,6 +159,31 @@ test('ícones são os arquivos TikTok de cada presente, sem confundir as rosas o
  assert.ok(cards.every(g=>g.image.startsWith('/gifts/')));
  assert.notEqual(cards.find(g=>g.effect==='join').image,cards.find(g=>g.effect==='bride').image);
  assert.equal(cards.find(g=>g.effect==='reset').image,'/gifts/ray-serenade.webp');
+ assert.equal(cards.find(g=>g.effect==='marry').image,'/gifts/finger-heart.webp');
+ assert.equal(cards.find(g=>g.effect==='marry').coins,5);
  assert.equal(send(s,'A','Ray Serenade',2999)?.effect,'reset');
  s.settings.rules[2].names='Item customizado';assert.equal(resolveGiftCatalog(s.settings.rules)[2].image,'');
+});
+test('eventos modernos leem extendedGiftInfo e aplicam apenas o fim do combo uma vez',()=>{
+ const s=fresh(),event={user:{uniqueId:'actual-user',nickname:'Pessoa'},giftId:42,giftDetails:{giftType:1},extendedGiftInfo:{name:'Finger Heart',diamond_count:5},common:{msgId:'gift-1'},repeatCount:3};
+ assert.equal(gift(s,{...event,repeatEnd:false},100),null);
+ assert.equal(gift(s,{...event,repeatEnd:true},200)?.effect,'marry');
+ assert.equal(s.couple.groomId,'actual-user');assert.equal(gift(s,{...event,repeatEnd:true},300),null);
+ assert.equal(s.people[0].name,'Pessoa');
+});
+test('migração do noivo troca nome, preço e IDs antigos sem mudar os outros presentes',()=>{
+ const s=fresh();s.schemaVersion=5;s.settings.rules[1]={...s.settings.rules[1],names:'Hand Heart,Mãos em coração',coins:100,ids:'401'};
+ const others=s.settings.rules.filter(r=>r.effect!=='marry');upgradeState(s);upgradeState(s);
+ const rule=s.settings.rules.find(r=>r.effect==='marry');assert.equal(rule.coins,5);assert.equal(rule.ids,'');assert.ok(!rule.names.includes('Hand Heart'));
+ assert.deepEqual(s.settings.rules.filter(r=>r.effect!=='marry'),others);
+ assert.equal(send(s,'wrong','Hand Heart',100),null);assert.equal(send(s,'right','Finger Heart',5)?.effect,'marry');
+});
+test('baratas de ambiente dão volume sem virar doadores, eventos ou participantes reais',()=>{
+ const s=fresh(),empty=sceneCast(s),ambient=empty.filter(p=>p.ambient);
+ assert.equal(ambient.length,AMBIENT_GUEST_COUNT);assert.ok(ambient.every(p=>!p.donor&&!p.name));assert.equal(s.people.length,0);
+ send(s,'real','Rose',1);const full=sceneCast(s);assert.equal(full.filter(p=>p.ambient).length,AMBIENT_GUEST_COUNT-1);
+ assert.equal(full.filter(p=>p.donor).length,1);assert.equal(s.people.length,1);
+ for(let i=0;i<AMBIENT_GUEST_COUNT;i++)send(s,'p'+i,'Rose',1);
+ assert.equal(sceneCast(s).filter(p=>p.ambient).length,0);
+ clearParty(s);assert.equal(sceneCast(s).filter(p=>p.ambient).length,AMBIENT_GUEST_COUNT);
 });

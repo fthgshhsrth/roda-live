@@ -5,6 +5,8 @@ export const BAND = Object.freeze([
  {id:'harmonica',label:'Gaita',icon:'🎵',position:[2.7,.56,-10]},
  {id:'saxophone',label:'Saxofone',icon:'🎷',position:[5.4,.56,-10]}
 ]);
+export const AMBIENT_GUEST_COUNT=10;
+const ambientGuests=Array.from({length:AMBIENT_GUEST_COUNT},(_,i)=>({id:'@ambient:'+i,name:'',ambient:true,donor:false}));
 export function partyRole(state,id){
  if(!id)return null;
  if(state.couple?.groomId===id)return {kind:'groom',label:'Noivo',icon:'🤵'};
@@ -18,7 +20,7 @@ export function sceneCast(state,demo=[]){
  const staff=(id,slot,props)=>({...find(id),id:id||'@stage:'+slot,name:find(id)?.name||props.roleLabel,
    donor:!!id,stageResident:true,...props});
  const dancers=(state.people.length?state.people:demo).filter(p=>!partyRole(state,p.id)).map(p=>({...p,donor:!p.demo}));
- return [...dancers,
+ return [...dancers,...ambientGuests.slice(0,Math.max(0,AMBIENT_GUEST_COUNT-dancers.length)),
    staff(state.couple?.brideId,'bride',{stageRole:'bride',weddingRole:'bride',roleLabel:'Noiva · Rosa 10',icon:'👰',position:[-.72,.55,0]}),
    staff(state.couple?.groomId,'groom',{stageRole:'groom',weddingRole:'groom',roleLabel:'Noivo · Coração',icon:'🤵',position:[.72,.55,0]}),
    ...BAND.map((instrument,i)=>staff(state.stage?.bandIds?.[i],'band-'+i,{stageRole:'band',instrument:instrument.id,

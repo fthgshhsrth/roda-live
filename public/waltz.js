@@ -11,11 +11,11 @@ export function coupleWaltzPose(time,role){
  return {x:side*.58*Math.cos(pose.turn)+pose.side*.4,z:-side*.58*Math.sin(pose.turn)+pose.forward*.3,
   rotation:pose.turn-side*Math.PI/2};
 }
-export function floorWaltzPosition(index,count,radius,time) {
+export function floorWaltzPosition(index,count,radius,time,{solo=false}={}) {
  const pose=waltzPose(time),pair=Math.floor(index/2),pairs=Math.ceil(count/2);
- const angle=pair/pairs*Math.PI*2+time*.055;
- const solo=index===count-1&&count%2===1,turn=pose.turn+(index%2)*Math.PI;
- const reach=solo?0:.58;
+ const angle=(solo?index/count:pair/pairs)*Math.PI*2+time*.055;
+ const unpaired=solo||index===count-1&&count%2===1,turn=pose.turn+(index%2)*Math.PI;
+ const reach=unpaired?0:.58;
  return {x:Math.sin(angle)*(radius+pose.forward)+Math.cos(turn)*reach+pose.side,
   z:Math.cos(angle)*(radius+pose.forward)+Math.sin(turn)*reach,rotation:-turn-Math.PI/2};
 }

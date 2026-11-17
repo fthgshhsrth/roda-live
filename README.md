@@ -7,7 +7,7 @@ Uma festa interativa para TikTok: baratas com carapaça segmentada em tons natur
 | Ação | Presente configurado | Valor por unidade |
 | --- | --- | --- |
 | Entrar na roda | Rosa | 1 moeda |
-| Ser o noivo | Mãos fazendo coração / Hand Heart | Conforme o presente |
+| Ser o noivo | Mãos Fazendo Coração / Finger Heart | 5 moedas |
 | Ser a noiva | Rosa de 10 moedas | 10 moedas |
 | Integrar a banda | Rosquinha / Doughnut | 30 moedas |
 | Ser DJ | Boné / Cap | 99 moedas |
@@ -17,7 +17,7 @@ O valor é o de uma unidade do presente, não a soma do combo. Dez rosas comuns 
 
 **O catálogo é carregado automaticamente ao conectar.** O overlay mostra os seis itens com nome, imagem, moedas e ação. Uma ação só é confirmada quando há uma correspondência única por nome/ID e custo. Se o presente não existir na live, aparece indisponível. Se houver variantes, selecione o item em **Presentes da live** e salve o mapa. Nunca escolhemos um presente apenas por ter o mesmo preço.
 
-Os valores da tabela são os configurados para esta festa, não uma garantia do catálogo atual do TikTok. O valor é por unidade. `Heart Me` não é sinônimo de `Hand Heart`. O reinício requer o item confirmado e valor de 2999 moedas. Catálogo, itens sazonais e captura real devem ser conferidos na conta que transmitirá.
+Os valores da tabela são os configurados para esta festa, não uma garantia do catálogo atual do TikTok. O valor é por unidade. O noivo usa `Finger Heart` (Mãos Fazendo Coração); `Hand Heart` (Mãos em Coração) e `Heart Me` são presentes diferentes e não concedem esse papel. O reinício requer o item confirmado e valor de 2999 moedas. Catálogo, itens sazonais e captura real devem ser conferidos na conta que transmitirá.
 ## Como a festa funciona
 - A rosa coloca o doador na roda com seu nome e renova o tempo de permanência.
 - Noivo e noiva são disputados separadamente. Quem envia o presente ocupa o papel até outro doador substituí-lo.
@@ -32,10 +32,13 @@ A câmera faz closes suaves, prioriza papéis recém-assumidos e participantes r
 
 A pista dança em ritmo lento de 72 BPM, com compasso 3/4 compartilhado, passos marcados, balanço dos ombros e transferência suave de peso. Os noivos ficam próximos, frente a frente, com braços voltados para o par e movimentos sincronizados. O relógio da coreografia é compartilhado; o arquivo de música não passa por detecção automática de BPM. Os músicos animam os instrumentos e o DJ opera o console, separados da valsa. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
 
+A festa mantém dez convidados de ambiente enquanto houver poucos participantes. Eles dançam avulsos, usam roupas e acessórios diferentes e não têm nomes, presentes, comentários ou papéis de doadores. Conforme chegam participantes reais, esses convidados cedem lugar. O contador inclui apenas participantes reais. O reinício restaura a composição de ambiente.
+
+O catálogo do overlay mostra ícones, funções e moedas, sem “a confirmar”. A conexão, eventuais itens indisponíveis e a validação dos IDs continuam visíveis no painel. Remover o texto do overlay não transforma o modo local em uma conexão TikTok confirmada.
 ## Cenário do casamento
 Um bolo de três andares, com cobertura, detalhes dourados, flores e alianças no topo, fica ao lado dos noivos. A câmera dos noivos inclui o bolo no enquadramento. A pista reserva o centro para o casal e o bolo; convidados dançam nos anéis externos.
 
-Cinco globos espelhados com brilho suave giram pelo salão, além do globo já existente. A iluminação é quente, com detalhes rosados. As roupas e acessórios continuam variados, com tecidos mais sóbrios e a aparência da carapaça preservada. Banda e DJ permanecem em seus postos e mantêm as animações dos instrumentos.
+Cinco globos espelhados com brilho suave giram pelo salão, além do globo já existente. Dois refletores de balada varrem a pista com feixes visíveis, manchas coloridas no chão e transições suaves entre azul, rosa e outras cores, sem efeito estroboscópico. A iluminação de base continua quente. As roupas e acessórios continuam variados, com tecidos mais sóbrios e a aparência da carapaça preservada. Banda e DJ permanecem em seus postos e mantêm as animações dos instrumentos.
 ## Executar
 Instale Node.js 22+:
 

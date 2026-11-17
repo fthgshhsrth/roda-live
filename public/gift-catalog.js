@@ -1,5 +1,5 @@
 import {giftArtwork} from './gift-artwork.js';
-export const giftActions = {join:'Entrar',marry:'Ser o noivo',bride:'Ser a noiva',band:'Banda',dj:'Ser DJ',reset:'Reiniciar'};
+export const giftActions = {join:'Entrar',marry:'Vire Noivo',bride:'Ser a noiva',band:'Banda',dj:'Ser DJ',reset:'Reiniciar'};
 const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const aliases = value => String(value || '').split(',').map(normalize).filter(Boolean);
 export function sanitizeGifts(raw) {
@@ -37,8 +37,8 @@ export function renderGiftCatalog(container, cards) {
   if (g.image) {const img = document.createElement('img');img.src = g.image;img.alt = g.name;img.referrerPolicy='no-referrer';img.onerror=missing;icon.append(img);}else missing();
   const info = document.createElement('div'),action = document.createElement('strong'),name = document.createElement('span'),price = document.createElement('small');
   action.textContent = g.action;name.textContent = g.name;
-  const coins=g.coins+' '+(g.coins===1?'moeda':'moedas');
-  price.textContent = g.status === 'verified' ? coins : g.status === 'unavailable' ? 'Indisponível nesta live' : g.status === 'ambiguous' ? 'Selecionar no painel' : (g.coins == null ? 'A confirmar' : coins + ' · confirmar');
+  const coins=g.coins==null?'':g.coins+' '+(g.coins===1?'moeda':'moedas');
+  price.textContent = g.status === 'unavailable' ? 'Indisponível nesta live' : g.status === 'ambiguous' ? 'Ver painel' : coins;
   info.append(action,name,price);card.append(icon,info);return card;
  }));
 }

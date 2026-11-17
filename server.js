@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {startDownload, executable as toolPath} from './media.js';
 import {activate, control} from './music.js';
-import {fresh,defaults,gift,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
+import {fresh,defaults,gift,giftPrice,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=process.env.RODA_DATA_DIR?path.resolve(process.env.RODA_DATA_DIR):path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
@@ -17,7 +17,7 @@ const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'M
 let availableGifts=[],catalogStatus='offline';
 const giftCatalog=()=>resolveGiftCatalog(state.settings.rules,availableGifts,catalogStatus);
 async function loadGiftCatalog(conn=live,ticket=epoch){
- if(!conn)throw Error('Conecte uma live para carregar os presentes disponíveis.');
+ if(!conn||status.phase!=='online')throw Error('Conecte uma live para carregar os presentes disponíveis.');
  catalogStatus='loading';send();
  try{
   const gifts=sanitizeGifts(conn.availableGifts?.length?conn.availableGifts:await conn.fetchAvailableGifts());
@@ -41,12 +41,12 @@ async function connect(username){
  const conn=new Connection(username,{enableExtendedGiftInfo:true,processInitialData:false,...(process.env.EULER_API_KEY?{signApiKey:process.env.EULER_API_KEY}:{})});live=conn;
  conn.on('gift',e=>{if(ticket!==epoch)return;
   const known=availableGifts.find(g=>g.id===String(e.giftId));
-  const ev=gift(state,{...e,diamondCount:e.diamondCount??e.giftDetails?.diamondCount??known?.coins,
-   giftName:e.giftName||e.giftDetails?.giftName||e.gift?.name},Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
+  const ev=gift(state,{...e,diamondCount:giftPrice(e)??known?.coins,
+   giftName:e.giftName||e.giftDetails?.giftName||e.extendedGiftInfo?.name||e.gift?.name||known?.name},Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
   if(ev){if(ev.effect==='reset')activeDownload?.cancel();save();send();}});
  conn.on('chat',e=>{if(ticket===epoch&&comment(state,e))send();});
  conn.on('error',()=>{if(ticket===epoch)setStatus('error','Erro de conexão. Verifique a live e o provedor de assinatura.');});
- conn.on('disconnected',()=>{if(ticket===epoch)setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');});
+ conn.on('disconnected',()=>{if(ticket===epoch){epoch++;live=null;availableGifts=[];catalogStatus='offline';setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');}});
  conn.on('streamEnd',()=>{if(ticket===epoch)disconnect();});
  await conn.connect();if(ticket!==epoch){conn.disconnect();return;}setStatus('online','Ao vivo com @'+username);
  try{await loadGiftCatalog(conn,ticket);}catch{ /* The panel exposes a retry; metadata-based matching remains available. */ }
