@@ -157,7 +157,7 @@
     },
     {
       "file": "public/roach.js",
-      "sha256": "12d48044573c76b368c00e591bd664319773f70bfd48463a44859f1fdd984e19",
+      "sha256": "8c866084cb62b71f19a383a8fb0306e4832720cab36216004630e96fffa859b2",
       "exports": [
         "characterSeed",
         "makeRoach"
@@ -170,7 +170,7 @@
     },
     {
       "file": "public/scene3d.js",
-      "sha256": "d6b835c6d41e0dfa252caa5569fc88d3749bc83d457680bf4af34a96e3beda21",
+      "sha256": "c48cdf522464e5c9ac4e0f6dc6ef281f3701fccb5fc6c01359aba90098b92ef1",
       "exports": [],
       "dependencies": [
         "three",
@@ -181,17 +181,30 @@
         "public/backstage.js",
         "public/capture-profile.js",
         "public/gift-catalog.js",
-        "public/waltz.js"
+        "public/waltz.js",
+        "public/wedding-decor.js"
       ]
     },
     {
       "file": "public/waltz.js",
-      "sha256": "c992342e22e3e7faf29f48a0142853a1c6a620e35e69e5731cd73266d77f360d",
+      "sha256": "49e949f194e8e8172014960357fca56fd993a7e361f8a3c0bd36f806de805d2d",
       "exports": [
+        "DANCE_BPM",
         "waltzPose",
+        "coupleWaltzPose",
         "floorWaltzPosition"
       ],
       "dependencies": []
+    },
+    {
+      "file": "public/wedding-decor.js",
+      "sha256": "495d3eb7b63a1735764d951c1a61938a05b85a691e1c7840807a7e9ce74d9613",
+      "exports": [
+        "addWeddingDecor"
+      ],
+      "dependencies": [
+        "three"
+      ]
     },
     {
       "file": "qa-camera.mjs",
@@ -203,13 +216,14 @@
     },
     {
       "file": "qa-party.mjs",
-      "sha256": "289fc4e4ae5f8cb0e178b9b7cdb1b839825775b0b89a9a3b707edb2017a56a4f",
+      "sha256": "0fb48c7ceea65a0fdc1b4a235e17d4223b75507c35ee0887dc7b1c87c10e8bcf",
       "exports": [],
       "dependencies": [
         "node:child_process",
         "node:fs",
         "node:path",
-        "node:assert/strict"
+        "node:assert/strict",
+        "three"
       ]
     },
     {
@@ -259,7 +273,7 @@
     },
     {
       "file": "test.js",
-      "sha256": "8b09f96b77edccf6a692b20d8ce934f10077639a53854272d3ae5a49ef856137",
+      "sha256": "608934929d79ae1364498d6149a8ff73b1bd37dbad54bfb6755712399443ba72",
       "exports": [],
       "dependencies": [
         "node:test",

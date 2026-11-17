@@ -1,5 +1,5 @@
 # Arraiá das Baratas · Roda Live 3D 🪳
-Uma festa interativa para TikTok: baratas com quitina em tons naturais, dois braços, duas pernas, antenas, asas com nervuras e roupas variadas, casal no centro, banda de cinco músicos e DJ. Todos os modelos, instrumentos e movimentos são gerados em Three.js/WebGL2, sem CDN.
+Uma festa interativa para TikTok: baratas com carapaça segmentada em tons naturais, cabeça estreita, olhos laterais, mandíbulas, dois braços, duas pernas, antenas longas, asas com nervuras e roupas variadas, casal no centro, banda de cinco músicos e DJ. Todos os modelos, instrumentos e movimentos são gerados em Three.js/WebGL2, sem CDN.
 
 <img src="docs/preview-vertical.png" width="420" alt="Festa 3D com banda, casal, DJ e balões dos doadores">
 
@@ -30,8 +30,12 @@ Os valores da tabela são os configurados para esta festa, não uma garantia do 
 
 A câmera faz closes suaves, prioriza papéis recém-assumidos e participantes recentes, e volta ao noivo periodicamente. A visão geral enquadra roda, palco e DJ. Na entrada por rosa, o personagem acena para a câmera. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.
 
-A pista dança uma valsa em compasso 3/4, com relógio compartilhado, passos sincronizados e pares que giram juntos. O casal acompanha o mesmo compasso. Os músicos animam os instrumentos e o DJ opera o console, separados da valsa. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
+A pista dança em ritmo lento de 72 BPM, com compasso 3/4 compartilhado, passos marcados, balanço dos ombros e transferência suave de peso. Os noivos ficam próximos, frente a frente, com braços voltados para o par e movimentos sincronizados. O relógio da coreografia é compartilhado; o arquivo de música não passa por detecção automática de BPM. Os músicos animam os instrumentos e o DJ opera o console, separados da valsa. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
 
+## Cenário do casamento
+Um bolo de três andares, com cobertura, detalhes dourados, flores e alianças no topo, fica ao lado dos noivos. A câmera dos noivos inclui o bolo no enquadramento. A pista reserva o centro para o casal e o bolo; convidados dançam nos anéis externos.
+
+Cinco globos espelhados com brilho suave giram pelo salão, além do globo já existente. A iluminação é quente, com detalhes rosados. As roupas e acessórios continuam variados, com tecidos mais sóbrios e a aparência da carapaça preservada. Banda e DJ permanecem em seus postos e mantêm as animações dos instrumentos.
 ## Executar
 Instale Node.js 22+:
 

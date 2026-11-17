@@ -8,7 +8,7 @@ import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 import {captureProfile} from './public/capture-profile.js';
-import {waltzPose,floorWaltzPosition} from './public/waltz.js';
+import {DANCE_BPM,waltzPose,floorWaltzPosition,coupleWaltzPose} from './public/waltz.js';
 const send=(s,id,name,coins,now=100,extra={})=>gift(s,{uniqueId:id,nickname:id,giftName:name,diamondCount:coins,...extra},now);
 test('rosa unitária entra; combo de dez rosas não vira noiva',()=>{
  const s=fresh();send(s,'Ana','Rose',1);send(s,'Ana','Rose',1,200,{repeatCount:10});
@@ -125,12 +125,27 @@ test('renderização prepara Full HD sem depender do DPI do monitor e limita buf
  assert.equal(captureProfile(720,960,{high:false}).fps,30);
 });
 test('valsa usa compasso comum de três tempos e mantém parceiros próximos',()=>{
- assert.ok(Math.abs(waltzPose(0).rise-waltzPose(2).rise)<1e-10);
+ assert.equal(DANCE_BPM,72);assert.ok(Math.abs(waltzPose(0).rise-waltzPose(2.5).rise)<1e-10);
  assert.ok(waltzPose(1).rise>waltzPose(0).rise);
  for(const t of [0,.5,1,2,10]){
   const a=floorWaltzPosition(0,8,4.7,t),b=floorWaltzPosition(1,8,4.7,t);
   assert.ok(Math.abs(Math.hypot(a.x-b.x,a.z-b.z)-1.16)<1e-10);
   assert.ok(Math.abs(Math.abs(a.rotation-b.rotation)-Math.PI)<1e-10);
+ }
+});
+test('noivos dançam próximos, frente a frente e sem saltos no ritmo lento',()=>{
+ for(let t=0;t<30;t+=.125){
+  const bride=coupleWaltzPose(t,'bride'),groom=coupleWaltzPose(t,'groom');
+  assert.ok(Math.abs(Math.hypot(bride.x-groom.x,bride.z-groom.z)-1.16)<1e-10);
+  assert.ok(Math.abs(Math.abs(bride.rotation-groom.rotation)-Math.PI)<1e-10);
+  assert.ok(Math.abs(waltzPose(t+.001).rise-waltzPose(t).rise)<.001);
+  assert.ok(Math.abs(waltzPose(t).step)<=.2);
+ }
+});
+test('passos da pista mantêm espaço livre para o bolo no centro',()=>{
+ for(const radius of [4.9,5.2,6.6])for(let t=0;t<40;t+=.5)for(let i=0;i<24;i++){
+  const p=floorWaltzPosition(i,24,radius,t);
+  assert.ok(Math.hypot(p.x-2.3,p.z+1.3)>1.4);
  }
 });
 test('balões respeitam a lateral reservada ao catálogo',()=>{

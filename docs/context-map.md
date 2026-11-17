@@ -21,14 +21,15 @@ graph LR
   n14["public/roach.js"]
   n15["public/scene3d.js"]
   n16["public/waltz.js"]
-  n17["qa-camera.mjs"]
-  n18["qa-party.mjs"]
-  n19["qa-wedding.mjs"]
-  n20["qa.mjs"]
-  n21["scripts/context-map.mjs"]
-  n22["server.js"]
-  n23["test.js"]
-  n24["wheel.js"]
+  n17["public/wedding-decor.js"]
+  n18["qa-camera.mjs"]
+  n19["qa-party.mjs"]
+  n20["qa-wedding.mjs"]
+  n21["qa.mjs"]
+  n22["scripts/context-map.mjs"]
+  n23["server.js"]
+  n24["test.js"]
+  n25["wheel.js"]
   n3 --> n13
   n8 --> n7
   n11 --> n15
@@ -44,23 +45,24 @@ graph LR
   n15 --> n6
   n15 --> n8
   n15 --> n16
-  n17 --> n18
-  n19 --> n18
-  n20 --> n18
-  n22 --> n1
-  n22 --> n2
-  n22 --> n24
-  n22 --> n8
-  n23 --> n24
-  n23 --> n13
-  n23 --> n5
-  n23 --> n10
+  n15 --> n17
+  n18 --> n19
+  n20 --> n19
+  n21 --> n19
   n23 --> n1
   n23 --> n2
+  n23 --> n25
   n23 --> n8
-  n23 --> n6
-  n23 --> n16
-  n24 --> n3
+  n24 --> n25
+  n24 --> n13
+  n24 --> n5
+  n24 --> n10
+  n24 --> n1
+  n24 --> n2
+  n24 --> n8
+  n24 --> n6
+  n24 --> n16
+  n25 --> n3
 ```
 
 Fluxos principais: presentes → server.js → wheel.js → party.js → public/party-layout.js; visual → scene3d.js → roach.js/instruments.js/backstage.js; câmera → camera-director.js.

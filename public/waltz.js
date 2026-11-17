@@ -1,8 +1,15 @@
-// One shared 3/4 clock keeps the floor and the couple on the same step.
+// A shared slow 3/4 clock marks the steps without making dancers jump.
+export const DANCE_BPM=72;
 export function waltzPose(time) {
- const phase=time*Math.PI*2*(90/60)/3;
- return {phase,rise:(1-Math.cos(phase))*.035,sway:Math.sin(phase)*.045,
-  forward:Math.sin(phase)*.13,side:Math.sin(phase*2)*.06,turn:time*.14};
+ const beat=time*Math.PI*2*(DANCE_BPM/60),phase=beat/3;
+ return {phase,rise:(1-Math.cos(phase))*.028+(1-Math.cos(beat))*.012,sway:Math.sin(phase)*.065,
+  forward:Math.sin(phase)*.16,side:Math.sin(phase*2)*.075,turn:time*.085+Math.sin(phase)*.025,
+  shoulder:Math.sin(beat)*.025,hips:Math.sin(phase)*.045,step:Math.sin(beat)*Math.abs(Math.sin(beat))*.19};
+}
+export function coupleWaltzPose(time,role){
+ const pose=waltzPose(time),side=role==='bride'?-1:1;
+ return {x:side*.58*Math.cos(pose.turn)+pose.side*.4,z:-side*.58*Math.sin(pose.turn)+pose.forward*.3,
+  rotation:pose.turn-side*Math.PI/2};
 }
 export function floorWaltzPosition(index,count,radius,time) {
  const pose=waltzPose(time),pair=Math.floor(index/2),pairs=Math.ceil(count/2);

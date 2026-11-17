@@ -6,7 +6,8 @@ import {sceneCast} from './party-layout.js';
 import {addBackstage} from './backstage.js';
 import {captureProfile} from './capture-profile.js';
 import {renderGiftCatalog} from './gift-catalog.js';
-import {waltzPose,floorWaltzPosition} from './waltz.js';
+import {coupleWaltzPose,floorWaltzPosition} from './waltz.js';
+import {addWeddingDecor} from './wedding-decor.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
@@ -117,6 +118,7 @@ for (let i = 0; i < 96; i++) { positions[i * 3] = Math.sin(i * 137.5) * (8 + i %
 const particlesGeometry = new THREE.BufferGeometry(); particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 const particles = new THREE.Points(particlesGeometry, new THREE.PointsMaterial({color: '#eac2df', size: .045, transparent: true, opacity: .6})); scene.add(particles);
 addBackstage(scene);
+const weddingDecor=addWeddingDecor(scene);
 
 let viewport = {width: 1, height: 1, top: 0, left: 0};
 function resize() {
@@ -216,7 +218,7 @@ function moveCamera(time, dt, entries) {
     const distance = Math.max(5.6, 4.2 / camera.aspect) * Math.max(.85, scale);
     desiredCamera.copy(desiredAim).add(new THREE.Vector3(.65, 2.1 * scale, distance));
     if(['bride','groom'].includes(featured.person.stageRole)){
-      desiredAim.set(0,1.8,.1);desiredCamera.set(.2,4.4,Math.max(7.8,5.3/camera.aspect));
+      desiredAim.set(1.1,1.65,-.35);desiredCamera.copy(desiredAim).add(new THREE.Vector3(.15,3.2,Math.max(10,7.4/camera.aspect)));
     }else if(featured.person.stageRole==='band'||featured.person.stageRole==='dj'){
       desiredCamera.copy(desiredAim).add(new THREE.Vector3(.35,2.1,Math.max(7,4.5/camera.aspect)));
     }
@@ -282,10 +284,10 @@ function draw(time) {
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;
   if (analyser && !audio.paused) { analyser.getByteFrequencyData(frequency); beat = frequency.slice(0, 10).reduce((a, b) => a + b, 0) / 2550; }
   const entries = [...characters.values()], dancers=entries.filter(entry=>!entry.person.stageResident),n=dancers.length;
-  const counts = n <= 12 ? [n] : n <= 30 ? [Math.ceil(n * .6), Math.floor(n * .4)] : [18, Math.min(18, n - 18), Math.max(0, n - 36)];
+  const counts = n <= 12 ? [n] : [Math.ceil(n*.56),Math.floor(n*.44)];
   let index = 0;
   counts.forEach((count, ring) => {
-    const radius = counts.length === 1 ? 4.7 : counts.length === 2 ? [5.9, 3.2][ring] : [6.2, 4.15, 2.1][ring];
+    const radius = counts.length === 1 ? 5.2 : [6.6,4.9][ring];
     for (let i = 0; i < count; i++) {
       const entry = dancers[index++]; if (!entry) continue;
       const pose=floorWaltzPosition(i,count,radius,elapsed);
@@ -301,13 +303,14 @@ function draw(time) {
     entry.model.root.position.set(...entry.person.position);
     entry.model.root.scale.setScalar(entry.person.stageRole==='band'?1:.95);entry.model.animate(elapsed,entry.person,Date.now()+offset,beat);
     if(['bride','groom'].includes(entry.person.stageRole)){
-      const turn=waltzPose(elapsed).turn,side=entry.person.stageRole==='bride'?-1:1;
-      entry.model.root.position.set(side*.72*Math.cos(turn),.55,-side*.72*Math.sin(turn));
-      entry.model.root.rotation.y=turn-side*Math.PI/2;
+      const pose=coupleWaltzPose(elapsed,entry.person.stageRole);
+      entry.model.root.position.set(pose.x,.55,pose.z);
+      entry.model.root.rotation.y=pose.rotation;
     }
   }
   moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;
+  weddingDecor.animate(elapsed,beat);
   particles.material.color.set(state.log[0]?.effect === 'galaxy' && Date.now() + offset - state.log[0].at < 6500 ? '#bf95ff' : '#efb5d6');
   renderer.render(scene, camera);
   if (frame % 2 === 0) labelLayout(entries, Date.now() + offset);
