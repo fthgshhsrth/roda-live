@@ -16,9 +16,10 @@ export function gift(s,e,now=Date.now()){
  const r=s.settings.rules.find(r=>r.ids.split(',').some(id=>id.trim()&&id.trim()===String(e.giftId))||r.names.split(',').some(n=>norm(n)&&norm(n)===norm(e.giftName)));
  if(!r)return null;prune(s,now);
  const who=identity(e),count=Math.min(10000,Math.max(1,Number(e.repeatCount)||1));let p=s.people.find(p=>p.id===who.id);
+ const entered=r.effect==='join'&&!p;
  if(r.effect==='join'){s.roses+=count;if(!p){if(s.people.length>=s.settings.capacity)return {message:'Roda cheia',effect:'full'};p={...who,roses:0,color:Math.floor(Math.random()*360)};s.people.push(p);}p.name=who.name;p.roses+=count;p.expires=now+s.settings.duration*60000;}
  if(p){p.effect=r.effect;p.effectUntil=now+6500;}
- const event={id:now+'-'+Math.random(),at:now,person:who.id,name:who.name,effect:r.effect,icon:r.icon,message:who.name+' enviou '+count+' × '+r.label};s.log.unshift(event);s.log=s.log.slice(0,40);return event;
+ const event={id:now+'-'+Math.random(),at:now,person:who.id,name:who.name,effect:r.effect,icon:r.icon,entered,message:entered?who.name+' entrou na roda!':who.name+' enviou '+count+' × '+r.label};s.log.unshift(event);s.log=s.log.slice(0,40);return event;
 }
 export function comment(s,e,now=Date.now()){const who=identity(e),p=s.people.find(p=>p.id===who.id&&p.expires>now);if(!p||!s.settings.comments)return false;p.comment=String(e.comment||'').replace(/[\x00-\x1f]/g,' ').slice(0,120);p.commentUntil=now+7000;return true;}
 export function settings(input,current){

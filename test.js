@@ -4,6 +4,7 @@ import {fresh,gift,comment,prune,settings} from './wheel.js';
 import {placeProjectedBubble,overlaps} from './public/layout.js';
 import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
+import {CameraDirector, CAMERA_TIMING, roseNotice} from './public/camera-director.js';
 test('rosa entra e renova sem duplicar personagem',()=>{const s=fresh();gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},1000);gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rosa',repeatCount:3},2000);assert.equal(s.people.length,1);assert.equal(s.people[0].roses,4);assert.equal(s.people[0].expires,902000);assert.equal(s.roses,4);});
 test('combo conta somente no encerramento',()=>{const s=fresh();assert.equal(gift(s,{uniqueId:'a',giftName:'Rose',giftType:1,repeatCount:2,repeatEnd:false}),null);gift(s,{user:{uniqueId:'a',nickname:'A'},giftName:'Rose',giftType:1,repeatCount:3,repeatEnd:true});assert.equal(s.roses,3);});
 test('comentário exige participante ativo',()=>{const s=fresh();assert.equal(comment(s,{uniqueId:'a',comment:'oi'},100),false);gift(s,{uniqueId:'a',giftName:'Rose'},100);assert.equal(comment(s,{uniqueId:'a',comment:'oi'},200),true);assert.equal(s.people[0].commentUntil,7200);prune(s,1000000);assert.equal(s.people.length,0);});
@@ -44,4 +45,55 @@ test('controles respeitam duração e comandos inválidos não alteram a faixa',
  control(m,{action:'seek',value:999},2000);assert.equal(m.position,20);
  control(m,{action:'pause'},2000);const snapshot=structuredClone(m);
  assert.throws(()=>control(m,{action:'volume',value:'abc'},3000));assert.deepEqual(m,snapshot);
+});
+
+test('câmera alterna visão geral e personagens aleatórios sem repetir imediatamente',()=>{
+ const camera=new CameraDirector(0,()=>0),ids=['ana','bia'];
+ assert.equal(camera.update(7999,ids).mode,'overview');
+ assert.equal(camera.update(8000,ids).targetId,'ana');
+ assert.equal(camera.update(8000+CAMERA_TIMING.random,ids).mode,'overview');
+ assert.equal(camera.update(12500+CAMERA_TIMING.overview,ids).targetId,'bia');
+});
+
+test('rosa interrompe destaque aleatório e cede lugar à visão geral ao terminar',()=>{
+ const camera=new CameraDirector(0,()=>0),ids=['ana','bia'];camera.update(8000,ids);
+ camera.rose({person:'bia',name:'Bia',entered:true},8100);
+ const close=camera.update(8100,ids);assert.equal(close.reason,'rose');assert.equal(close.targetId,'bia');
+ assert.equal(roseNotice(close.event),'🌹 Bia entrou na roda!');
+ assert.equal(camera.update(13100,ids).mode,'overview');
+ assert.equal(camera.update(14000,ids).mode,'overview');
+});
+
+test('rosas de pessoas diferentes ganham destaque em ordem, com zoomout entre elas',()=>{
+ const camera=new CameraDirector(0),ids=['ana','bia'];
+ camera.rose({person:'ana',name:'Ana',entered:true},100);camera.update(100,ids);
+ camera.rose({person:'bia',name:'Bia',entered:true},200);
+ camera.rose({person:'bia',name:'Bia',entered:false},300);
+ assert.equal(camera.queue.length,1);assert.equal(camera.update(300,ids).targetId,'ana');
+ assert.equal(camera.update(5100,ids).mode,'overview');
+ assert.equal(camera.update(7599,ids).mode,'overview');
+ const next=camera.update(7600,ids);assert.equal(next.targetId,'bia');assert.equal(next.event.entered,true);
+});
+
+test('combo de rosas não prende a câmera para sempre e alvos removidos são descartados',()=>{
+ const camera=new CameraDirector(0),ids=['ana','bia'];camera.rose({person:'ana'},100);camera.update(100,ids);
+ for(let now=1000;now<8000;now+=1000)camera.rose({person:'ana'},now);
+ assert.equal(camera.update(8100,ids).mode,'overview');
+ camera.rose({person:'bia'},8200);assert.equal(camera.update(11000,['ana']).targetId,null);
+ const focus=new CameraDirector(0);focus.rose({person:'ana'},0);focus.update(0,ids);
+ assert.equal(focus.update(100,['bia']).mode,'overview');
+ assert.equal(new CameraDirector(0).update(9000,[]).mode,'overview');
+});
+
+test('evento de rosa distingue entrada e renovação para o aviso e para a câmera',()=>{
+ const s=fresh(),first=gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},100);
+ const renewal=gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},200);
+ assert.equal(first.entered,true);assert.match(first.message,/entrou na roda/);
+ assert.equal(renewal.entered,false);assert.match(roseNotice(renewal),/mandou rosas/);
+});
+
+test('primeira rosa interrompe o close de demonstração sem esperar outro ciclo',()=>{
+ const camera=new CameraDirector(0,()=>0);camera.update(8000,['demo']);
+ camera.rose({person:'ana',name:'Ana',entered:true},8100);
+ const shot=camera.update(8100,['ana']);assert.equal(shot.targetId,'ana');assert.equal(shot.reason,'rose');
 });

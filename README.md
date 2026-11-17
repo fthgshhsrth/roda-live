@@ -11,6 +11,15 @@ Template local de live interativa para TikTok, com uma pista circular e baratas 
 - A biblioteca foi substituída por um downloader: **link → yt-dlp → MP3 → reprodução automática na live**.
 - Janela sem barra de navegador, composição vertical/horizontal e modo leve.
 
+## Câmera automática
+A câmera alterna entre a visão geral da roda e closes de personagens aleatórios, com aproximação e afastamento suaves. Evita repetir o mesmo personagem em dois sorteios consecutivos.
+
+Quem envia rosas ganha prioridade sobre um close aleatório. O foco acompanha a barata enquanto ela dança. Na entrada, a câmera aproxima, a barata levanta a mão e dá um **tchauzinho para a câmera**, junto do aviso **“Nome entrou na roda!”**. Outra rosa de quem já participa renova o tempo e mostra o aviso de rosas.
+
+Se várias pessoas enviarem rosas, os destaques seguem a ordem de chegada, com um zoomout para mostrar a roda entre eles. Combos repetidos da mesma pessoa não prendem a câmera indefinidamente. Ao abrir a cena, avisos antigos não são repetidos.
+
+Para verificar somente essa função, com o servidor iniciado e a sessão vazia/desconectada, execute **node qa-camera.mjs**. O teste usa Edge e limpa os participantes simulados ao terminar.
+
 ## Executar
 Instale Node.js 22+ e execute:
 

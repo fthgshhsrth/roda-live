@@ -1,13 +1,14 @@
 import * as THREE from '/vendor/three/three.module.js';
 import {makeRoach} from './roach.js';
 import {overlaps, placeProjectedBubble} from './layout.js';
+import {CameraDirector, roseNotice} from './camera-director.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
 document.body.classList.toggle('preview', preview);
 let state = {settings: {speed: 1, comments: true}, people: [], music: {}, log: []};
 let offset = 0, elapsed = 0, frame = 0, lastTick = performance.now(), lastRender = 0;
-let high = new URLSearchParams(location.search).get('quality') !== 'low', lastEvent = '', toastUntil = 0;
+let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0;
 $('quality').textContent = high ? 'Qualidade: alta' : 'Qualidade: leve';
 const audio = $('audio'), channel = new BroadcastChannel('roda-live-audio');
 const ownerId = crypto.randomUUID(); let audioOwner = false, audioKey = '', metadataKey = '';
@@ -69,6 +70,10 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 renderer.shadowMap.enabled = !preview; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, .1, 180);
+const director = new CameraDirector(performance.now());
+const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0, .7, 0);
+const cameraAim = overviewAim.clone(), desiredCamera = new THREE.Vector3(), desiredAim = new THREE.Vector3();
+let cameraInitialized = false, shot = director.update(performance.now(), []), shownShot = -1;
 scene.add(new THREE.HemisphereLight('#e4c3ff', '#24132b', 2.3));
 const keyLight = new THREE.DirectionalLight('#ffe3bb', 4); keyLight.position.set(-6, 12, 10);
 keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024);
@@ -113,7 +118,9 @@ function resize() {
   renderer.setPixelRatio(ratio); renderer.setSize(bounds.width, bounds.height, false);
   camera.aspect = bounds.width / bounds.height;
   const distance = Math.max(26, 24 / camera.aspect);
-  camera.position.set(0, distance * .64, distance * .83); camera.lookAt(0, .7, 0); camera.updateProjectionMatrix();
+  overviewPosition.set(0, distance * .64, distance * .83);
+  if (!cameraInitialized) {camera.position.copy(overviewPosition); cameraAim.copy(overviewAim); cameraInitialized = true;}
+  camera.lookAt(cameraAim); camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe($('viewport'));
 $('quality').onclick = () => { high = !high; renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
@@ -139,6 +146,13 @@ function reconcile(people) {
   renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
 }
 const demo = Array.from({length: 8}, (_, i) => ({id: 'roach-demo-' + i, name: ['DJ Casquinha', 'Dona Antena', 'MC Crocante', 'Brilhosa', 'Seu Bigode', 'Patinhas', 'Zé do Passinho', 'Rainha da Pista'][i], demo: true}));
+const seenEvents = new Set(); let receivedSnapshot = false;
+function showEventToast(message, entry = false) {
+  $('eventToast').textContent = message;
+  $('eventToast').classList.toggle('entry-notice', entry);
+  toastUntil = Date.now() + 5000;
+  if (entry) toastProtectedUntil = Date.now() + 3000;
+}
 function updateState(next) {
   state = next; offset = next.serverTime - Date.now(); $('offline').hidden = true;
   document.body.classList.toggle('transparent', !!next.settings.transparent);
@@ -149,17 +163,40 @@ function updateState(next) {
   $('demoHint').hidden = next.people.length > 0;
   $('nowTrack').hidden = !next.music.playing || !next.track;
   $('trackLabel').textContent = next.track?.title || '';
-  const event = next.log[0];
-  if (event && event.id !== lastEvent) {
-    lastEvent = event.id;
-    if (next.serverTime - event.at < 6500) { $('eventToast').textContent = event.icon + ' ' + event.message; toastUntil = Date.now() + 5000; }
-  }
   reconcile(next.people.length ? next.people : demo); void synchronizeAudio();
+  // The first snapshot is a baseline; opening/reconnecting the scene never replays old entries.
+  for (const event of [...next.log].reverse()) {
+    if (seenEvents.has(event.id)) continue;
+    seenEvents.add(event.id);
+    if (!receivedSnapshot || next.serverTime - event.at > 15000) continue;
+    if (event.effect === 'join') director.rose(event, performance.now());
+    else if (Date.now() >= toastProtectedUntil) showEventToast(event.icon + ' ' + event.message);
+  }
+  receivedSnapshot = true;
+  if (seenEvents.size > 200) {seenEvents.clear(); next.log.forEach(event => seenEvents.add(event.id));}
 }
 const events = new EventSource('/events'); events.onmessage = e => updateState(JSON.parse(e.data)); events.onerror = () => $('offline').hidden = false;
 function project(x, y, z) {
   const v = new THREE.Vector3(x, y, z).project(camera);
-  return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2};
+  return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2, visible: v.z >= -1 && v.z <= 1};
+}
+function moveCamera(time, dt, entries) {
+  shot = director.update(time, entries.map(entry => entry.person.id));
+  desiredCamera.copy(overviewPosition); desiredAim.copy(overviewAim);
+  const featured = characters.get(shot.targetId);
+  if (shot.mode === 'focus' && featured) {
+    const root = featured.model.root, scale = root.scale.x;
+    desiredAim.set(root.position.x, 1.4 * scale + featured.model.dancer.position.y * .3, root.position.z);
+    const distance = Math.max(5.6, 4.2 / camera.aspect) * Math.max(.85, scale);
+    desiredCamera.copy(desiredAim).add(new THREE.Vector3(.65, 2.1 * scale, distance));
+  }
+  const blend = 1 - Math.exp(-dt * 3.2);
+  camera.position.lerp(desiredCamera, blend); cameraAim.lerp(desiredAim, blend); camera.lookAt(cameraAim);
+  if (shownShot !== shot.token) {
+    shownShot = shot.token;
+    for (const entry of entries) entry.name.classList.toggle('camera-focus', entry.person.id === shot.targetId);
+    if (shot.mode === 'focus' && shot.reason === 'rose') showEventToast(roseNotice(shot.event), true);
+  }
 }
 let projected = [], bubbleBoxes = [];
 function labelLayout(entries, now) {
@@ -168,6 +205,10 @@ function labelLayout(entries, now) {
     const root = entry.model.root, scale = root.scale.x;
     const head = project(root.position.x, 3.5 * scale + entry.model.dancer.position.y, root.position.z);
     const feet = project(root.position.x, 0, root.position.z);
+    entry.bubble.hidden = true; entry.line.style.display = 'none';
+    const visible = head.visible && feet.visible && feet.x > -100 && feet.x < w + 100 && feet.y > 0 && head.y < h;
+    entry.name.hidden = !visible;
+    if (!visible) continue;
     const left = project(root.position.x - 1.1 * scale, 1.3, root.position.z);
     const right = project(root.position.x + 1.1 * scale, 1.3, root.position.z);
     const body = {x: left.x - 5, y: head.y - 5, w: right.x - left.x + 10, h: feet.y - head.y + 32};
@@ -214,9 +255,11 @@ function draw(time) {
       entry.model.root.position.set(Math.sin(angle) * radius, .03, Math.cos(angle) * radius);
       const baseScale = .83 + (entry.model.seed % 4) * .065;
       entry.model.root.scale.setScalar(baseScale * (n > 30 ? .68 : n > 12 ? .85 : 1));
-      entry.model.animate(elapsed, entry.person, Date.now() + offset, beat);
+      const greeting = shot.reason === 'rose' && shot.targetId === entry.person.id && !!shot.event?.entered;
+      entry.model.animate(elapsed, entry.person, Date.now() + offset, beat, greeting);
     }
   });
+  moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;
   particles.material.color.set(state.log[0]?.effect === 'galaxy' && Date.now() + offset - state.log[0].at < 6500 ? '#bf95ff' : '#efb5d6');
   renderer.render(scene, camera);
@@ -224,6 +267,9 @@ function draw(time) {
   $('eventToast').classList.toggle('visible', Date.now() < toastUntil);
 }
 window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls,
-  characters: characters.size, obstacles: projected, bubbles: bubbleBoxes, bubbleOverlap: bubbleBoxes.some(b => projected.some(p => overlaps(b, p)))})};
+  characters: characters.size, obstacles: projected, bubbles: bubbleBoxes, bubbleOverlap: bubbleBoxes.some(b => projected.some(p => overlaps(b, p))),
+  camera: {mode: shot.mode, reason: shot.reason, targetId: shot.targetId, token: shot.token,
+    position: camera.position.toArray(), aim: cameraAim.toArray(), distance: camera.position.distanceTo(cameraAim),
+    greeting: characters.get(shot.targetId)?.model.isGreeting || false}})};
 $('scene').addEventListener('webglcontextlost', e => { e.preventDefault(); $('boot').hidden = false; $('boot').textContent = 'A GPU interrompeu a cena. Reabra a janela ou use o modo leve.'; });
 reconcile(demo); resize(); $('boot').hidden = true; requestAnimationFrame(draw);

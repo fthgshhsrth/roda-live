@@ -63,19 +63,25 @@ export function makeRoach(person) {
     pivot.add(new THREE.Mesh(geometry, dark)); ball(pivot, accent, [side * .65, .6, .13], [.055, .055, .055]); antennae.push(pivot);
   }
   // Three articulated pairs: two arm pairs and the bottom dancing legs.
-  const limbs = [];
+  const limbs = []; let greetingActive = false;
   for (const side of [-1, 1]) for (let row = 0; row < 3; row++) {
     const pivot = new THREE.Group(); pivot.position.set(side * (.37 + row * .025), 1.5 - row * .48, 0); dancer.add(pivot);
+    let hand, fingers;
     if (row < 2) {
       limb(pivot, [0, 0, 0], [side * .43, -.15, .06], .045, dark);
       limb(pivot, [side * .43, -.15, .06], [side * .62, .08, .16], .04, material);
-      ball(pivot, accent, [side * .63, .08, .16], [.1, .095, .09]);
+      hand = ball(pivot, accent, [side * .63, .08, .16], [.1, .095, .09]);
+      if (row === 0 && side === 1) {
+        fingers = new THREE.Group(); fingers.visible = false; hand.add(fingers);
+        for (let i = -1; i <= 1; i++) ball(fingers, accent, [i * .48, .8, 0], [.2, .65, .28]);
+        ball(fingers, accent, [-1, .1, .05], [.6, .23, .28]);
+      }
     } else {
       limb(pivot, [0, 0, 0], [side * .2, -.28, .02], .055, dark);
       limb(pivot, [side * .2, -.28, .02], [side * .12, -.48, .18], .05, material);
       ball(pivot, variant === 5 ? accent : shoe, [side * .13, -.48, .22], [.19, .1, .28]);
     }
-    limbs.push({pivot, side, row});
+    limbs.push({pivot, side, row, hand, fingers});
   }
   const hat = new THREE.Group(); hat.position.set(0, 2.14, .04); dancer.add(hat);
   if (variant === 0) { // Sunglasses.
@@ -106,16 +112,28 @@ export function makeRoach(person) {
   const hearts = Array.from({length: 3}, () => {const sprite = new THREE.Sprite(heartMaterial);sprite.visible = false;sprite.scale.setScalar(.33);dancer.add(sprite);return sprite;});
   const scale = .83 + (seed % 4) * .065; root.scale.setScalar(scale);
   return {root, dancer, seed, variant, material,
-    animate(t, person, now, beat = 0) {
+    get isGreeting() { return greetingActive; },
+    get greetingArm() { return limbs.find(limb => limb.row === 0 && limb.side === 1).pivot; },
+    animate(t, person, now, beat = 0, greeting = false) {
+      greetingActive = greeting;
       const phase = t * (4.2 + variant * .23) + seed % 100;
       const effect = person.effectUntil > now ? person.effect : '';
       dancer.position.y = Math.abs(Math.sin(phase)) * (.07 + beat * .13) + (effect === 'jump' ? Math.abs(Math.sin(t * 8)) * .95 : 0);
       dancer.rotation.z = Math.sin(phase / 2) * (.12 + variant * .015);
       dancer.rotation.x = Math.cos(phase) * .07;
       root.rotation.y = Math.sin(phase / 3) * .25;
-      for (const {pivot, side, row} of limbs) {
+      if (greeting) { root.rotation.y = .1; dancer.rotation.z *= .2; dancer.rotation.x = 0; }
+      for (const {pivot, side, row, hand, fingers} of limbs) {
         pivot.rotation.z = side * Math.sin(phase + row * 1.4 + (side < 0 ? Math.PI : 0)) * (row === 2 ? .3 : .65);
         pivot.rotation.x = Math.sin(phase + row) * .3;
+        if (fingers) fingers.visible = greeting;
+        if (hand) hand.scale.set(.1, .095, .09);
+        if (greeting && row === 0 && side === 1) {
+          // Keep the palm next to the face and wave independently of dance speed.
+          pivot.rotation.z = 1.25 + Math.sin(now * .011) * .32;
+          pivot.rotation.x = -.2 + Math.cos(now * .011) * .1;
+          hand.scale.set(.145, .15, .11);
+        }
       }
       antennae.forEach((a, i) => { a.rotation.z = Math.sin(phase * .7 + i) * .16; });
       crown.visible = effect === 'king';
