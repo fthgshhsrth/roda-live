@@ -198,7 +198,7 @@
     },
     {
       "file": "public/wedding-decor.js",
-      "sha256": "495d3eb7b63a1735764d951c1a61938a05b85a691e1c7840807a7e9ce74d9613",
+      "sha256": "d0a1c1a70e841610b2e176493aa3b34deade0e4c591d8fa8990b5010155cbc79",
       "exports": [
         "addWeddingDecor"
       ],

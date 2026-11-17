@@ -45,7 +45,7 @@ export function addWeddingDecor(scene){
  const glowTexture=new THREE.CanvasTexture(glowCanvas),globes=[];
  const mirror=new THREE.MeshStandardMaterial({color:'#b4b8c0',metalness:.9,roughness:.2,flatShading:true});
  const tileGeometry=new THREE.BoxGeometry(.065,.06,.015),sphereGeometry=new THREE.IcosahedronGeometry(.42,2);
- for(const [i,position] of [[-5.5,5.7,-5],[5.6,5.8,-5],[-6,4.9,3.5],[6,5.1,3.5],[0,6.4,-10]].entries()){
+ for(const [i,position] of [[-5.5,9,-5],[5.6,9,-5],[-6,4.9,3.5],[6,5.1,3.5],[0,6.4,-10]].entries()){
   const globe=new THREE.Group();globe.name='Globo de luz '+(i+1);globe.position.set(...position);group.add(globe);
   add(globe,sphereGeometry,mirror,0,0,0);
   const tiles=new THREE.InstancedMesh(tileGeometry,mirror,128),dummy=new THREE.Object3D();
