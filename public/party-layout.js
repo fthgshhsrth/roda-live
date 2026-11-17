@@ -21,8 +21,8 @@ export function sceneCast(state,demo=[]){
    donor:!!id,stageResident:true,...props});
  const dancers=(state.people.length?state.people:demo).filter(p=>!partyRole(state,p.id)).map(p=>({...p,donor:!p.demo}));
  return [...dancers,...ambientGuests.slice(0,Math.max(0,AMBIENT_GUEST_COUNT-dancers.length)),
-   staff(state.couple?.brideId,'bride',{stageRole:'bride',weddingRole:'bride',roleLabel:'Noiva · Rosa 10',icon:'👰',position:[-.72,.55,0]}),
-   staff(state.couple?.groomId,'groom',{stageRole:'groom',weddingRole:'groom',roleLabel:'Noivo · Coração',icon:'🤵',position:[.72,.55,0]}),
+   staff(state.couple?.brideId,'bride',{stageRole:'bride',weddingRole:'bride',roleLabel:'Noiva · Rosa 10',icon:'👰',position:[-1.3,.55,.35]}),
+   staff(state.couple?.groomId,'groom',{stageRole:'groom',weddingRole:'groom',roleLabel:'Noivo · Coração',icon:'🤵',position:[1.3,.55,.35]}),
    ...BAND.map((instrument,i)=>staff(state.stage?.bandIds?.[i],'band-'+i,{stageRole:'band',instrument:instrument.id,
      roleLabel:instrument.label,icon:instrument.icon,position:instrument.position})),
    staff(state.stage?.djId,'dj',{stageRole:'dj',instrument:'dj',roleLabel:'DJ · Boné',icon:'🎧',position:[8.6,.4,-5.8]})];

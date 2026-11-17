@@ -47,7 +47,12 @@ try{
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='band').length"),5);
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='dj').length"),1);
  const give=(user,giftName,coins)=>api('simulate',{user,giftName,coins});
- await give('Visitante','Rose',1);await give('Noivo','Finger Heart',5);
+ await until("window.roda3D.diagnostics().camera.reason==='random'");
+ await evaluate('window.__giftStart=performance.now()');await give('Visitante','Rose',1);
+ await until("window.roda3D.diagnostics().camera.targetId==='Visitante'&&document.getElementById('eventToast').classList.contains('visible')&&document.getElementById('eventToast').textContent.includes('Visitante')");
+ // Software WebGL can block a frame; timing is recorded, while scheduler/transport latency is unit-tested.
+ const alertLatencyMs=await evaluate('Math.round(performance.now()-window.__giftStart)');
+ await give('Noivo','Finger Heart',5);
  await until("window.roda3D.diagnostics().camera.reason==='marry'&&window.roda3D.diagnostics().camera.distance<20");
  const cakeInFrame=await evaluate("(async()=>{const T=await import('/vendor/three/three.module.js'),r=window.roda3D,b=new T.Box3().setFromObject(r.scene.getObjectByName('Bolo de casamento'));return [b.min.x,b.max.x].every(x=>[b.min.y,b.max.y].every(y=>[b.min.z,b.max.z].every(z=>{const v=new T.Vector3(x,y,z).project(r.camera);return Math.abs(v.x)<=1&&Math.abs(v.y)<=1})))})()");
  assert.ok(cakeInFrame,'O bolo precisa aparecer no enquadramento dos noivos');
@@ -62,8 +67,10 @@ try{
  assert.equal(await evaluate("window.roda3D.characters.get('Noivo').model.weddingRole"),'groom');
  assert.equal(await evaluate("document.querySelectorAll('.donor-name').length"),9);
  assert.ok(await evaluate('window.roda3D.diagnostics().visibleNames<=1'));
- await until("(()=>{const e=[...window.roda3D.characters.values()].filter(e=>!['band','dj'].includes(e.person.stageRole));return Math.max(...e.map(x=>x.model.dancer.position.y))-Math.min(...e.map(x=>x.model.dancer.position.y))<.00001})()");
+ assert.ok(await evaluate("(()=>{const e=[...window.roda3D.characters.values()].filter(e=>!['band','dj'].includes(e.person.stageRole));return Math.max(...e.map(x=>x.model.dancer.position.y))-Math.min(...e.map(x=>x.model.dancer.position.y))>.001})()"));
+ assert.ok(await evaluate("window.roda3D.characters.get('Noivo').model.root.position.distanceTo(window.roda3D.characters.get('Noiva').model.root.position)>2.5"));
  await until("window.roda3D.diagnostics().camera.mode==='overview'&&window.roda3D.diagnostics().camera.distance>30",18000);
+ await until("(async()=>{if(window.roda3D.diagnostics().camera.mode!=='overview')return false;const T=await import('/vendor/three/three.module.js');return [...window.roda3D.characters.values()].every(e=>[-.9,.9].every(dx=>[0,3.4].every(dy=>{const v=e.model.root.position.clone().add(new T.Vector3(dx,dy,0)).project(window.roda3D.camera);return Math.abs(v.x)<.98&&Math.abs(v.y)<.95})))})()",20000);
  await cdp('Page.reload');await until('window.roda3D?.diagnostics().frames>1',40000);
  fs.mkdirSync(path.join(root,'verificacao'),{recursive:true});
  const image=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(root,'verificacao/festa-banda.png'),Buffer.from(image.data,'base64'));
@@ -75,6 +82,11 @@ try{
  assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
  assert.ok(await evaluate("window.roda3D.renderer.domElement.getBoundingClientRect().height===innerHeight&&document.querySelector('.gift-sidebar').getBoundingClientRect().right<=innerWidth"));
  const horizontal=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(root,'verificacao/overlay-horizontal.png'),Buffer.from(horizontal.data,'base64'));
+ const initialRadius=await evaluate('window.roda3D.diagnostics().spiralRadius');
+ for(let i=0;i<24;i++)await give('Espiral '+i,'Rose',1);
+ await until("[...window.roda3D.characters.values()].filter(e=>!e.person.stageResident).length===25");
+ assert.ok(await evaluate('window.roda3D.diagnostics().spiralRadius>'+initialRadius));
+ assert.ok(await evaluate("(()=>{const e=[...window.roda3D.characters.values()].filter(e=>!e.person.stageResident);return e.every((a,i)=>e.slice(i+1).every(b=>a.model.root.position.distanceTo(b.model.root.position)>3.19))})()"));
  await give('Novo músico','Donut',30);await until("window.roda3D.characters.get('Novo músico')?.model.instrument==='accordion'");
  assert.equal(await evaluate("window.roda3D.characters.get('Sanfoneiro').person.stageResident||false"),false);
  await give('Novo DJ','Cap',99);await until("window.roda3D.characters.get('Novo DJ')?.model.instrument==='dj'");
@@ -82,8 +94,14 @@ try{
  await until("!document.getElementById('finale').hidden");
  const clean=await snapshot();assert.equal(clean.people.length,0);assert.ok(clean.stage.bandIds.every(id=>id===null));assert.equal(clean.stage.djId,null);assert.equal(clean.couple.brideId,null);assert.equal(clean.couple.groomId,null);assert.equal(clean.music.playing,false);
  await until("document.querySelectorAll('.donor-name').length===0");
+ await cdp('Page.navigate',{url:'http://localhost:3011/'});
+ await until("document.getElementById('sourceURL')?.value.includes('/overlay.html?')");
+ assert.ok(await evaluate("new URL(document.getElementById('sourceURL').value).origin===location.origin"));
+ assert.equal(await evaluate("document.getElementById('startSource').textContent"),'Restaurar link local');
+ await evaluate("document.getElementById('startSource').click()");
+ assert.ok(await evaluate("new URL(document.getElementById('sourceURL').value).searchParams.get('source')==='1'"));
  assert.equal(errors.length,0,errors.join('\n'));
- const report={noPendingText:'PASS',fingerHeart5:'PASS',ambientGuests10:'PASS',movingClubLights:'PASS',anatomy4limbs:'PASS',wings2:'PASS',antennae2:'PASS',naturalHead:'PASS',slowDance:'PASS',weddingCake3tiers:'PASS',cakeInWeddingShot:'PASS',animatedGlobes5:'PASS',synchronizedWaltz:'PASS',tiktokArtwork6:'PASS',rightSidebar:'PASS',band5:'PASS',instruments:'PASS',dj:'PASS',couple:'PASS',cleanNames:'PASS',catalog6:'PASS',portrait1080:'PASS',landscape1920:'PASS',commentsNoOverlap:'PASS',roleReplacement:'PASS',reset2999:'PASS',javascriptErrors:errors.length};
+ const report={localLinkRestored:'PASS',alertLatencyMs,overviewFitsAll:'PASS',randomCameraWithoutDonors:'PASS',expandingSpiral:'PASS',noBodyOverlap25:'PASS',fastSoloDance:'PASS',separatedWeddingRoles:'PASS',noPendingText:'PASS',fingerHeart5:'PASS',ambientGuests10:'PASS',movingClubLights:'PASS',anatomy4limbs:'PASS',wings2:'PASS',antennae2:'PASS',naturalHead:'PASS',weddingCake3tiers:'PASS',cakeInWeddingShot:'PASS',animatedGlobes5:'PASS',tiktokArtwork6:'PASS',rightSidebar:'PASS',band5:'PASS',instruments:'PASS',dj:'PASS',cleanNames:'PASS',catalog6:'PASS',portrait1080:'PASS',landscape1920:'PASS',commentsNoOverlap:'PASS',roleReplacement:'PASS',reset2999:'PASS',javascriptErrors:errors.length};
  fs.writeFileSync(path.join(root,'verificacao/resultado-festa.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }catch(e){console.error(e);process.exitCode=1;}
 finally{if(ws?.readyState===1)ws.send(JSON.stringify({id:999999,method:'Browser.close'}));await api('clear',{});await sleep(100);ws?.close();browser.kill();server.kill();}

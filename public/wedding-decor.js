@@ -7,7 +7,7 @@ export function addWeddingDecor(scene){
  const gold=new THREE.MeshStandardMaterial({color:'#b99850',metalness:.74,roughness:.25});
  const rose=new THREE.MeshStandardMaterial({color:'#944e5a',roughness:.8});
  const leaf=new THREE.MeshStandardMaterial({color:'#455d43',roughness:.9});
- const cake=new THREE.Group();cake.name='Bolo de casamento';cake.position.set(2.3,0,-1.3);group.add(cake);
+ const cake=new THREE.Group();cake.name='Bolo de casamento';cake.position.set(3.4,0,-1.8);group.add(cake);
  const add=(parent,geometry,material,x,y,z)=>{
   const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
  };

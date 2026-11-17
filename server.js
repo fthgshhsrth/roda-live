@@ -16,8 +16,9 @@ let audioReady=false, activeDownload=null;
 state.music.queue=[];state.music.revision=state.music.revision||0;state.music.duration=state.music.duration||0;
 const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'Modo local · simulador disponível'},jobs=[];
 const port=Number(process.env.PORT)||3000;
+let viewRevision=0;const stateWaiters=new Set();
 const publicSource=createPublicSource({root:ROOT,assetPort:port,getSnapshot:snapshot,onChange:send,
- onMusic:b=>{control(state.music,b);save();send();}});
+ onMusic:b=>{control(state.music,b);send();save();}});
 let availableGifts=[],catalogStatus='offline';
 const giftCatalog=()=>resolveGiftCatalog(state.settings.rules,availableGifts,catalogStatus);
 async function loadGiftCatalog(conn=live,ticket=epoch){
@@ -32,8 +33,11 @@ async function loadGiftCatalog(conn=live,ticket=epoch){
 }
 function save(){fs.writeFileSync(stateFile,JSON.stringify(state,null,2));}
 function currentTrack(){const file=state.music.file;return file?{file,title:file.replace(/\s*\[[^\]]+\]\.mp3$/,'').replace(/\.mp3$/,''),url:'/music/'+encodeURIComponent(file)}:null;}
-function snapshot(){prune(state);return {...state,status,jobs,sourceLink:publicSource.status(),giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
-function send(){const data='data: '+JSON.stringify(snapshot())+'\n\n';for(const res of clients)res.write(data);}
+function snapshot(){prune(state);return {...state,revision:viewRevision,status,jobs,sourceLink:publicSource.status(),giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
+function send(visual=true){
+ if(visual){viewRevision++;for(const reply of [...stateWaiters])reply();publicSource.notify();}
+ const data='data: '+JSON.stringify(snapshot())+'\n\n';for(const res of clients)res.write(data);
+}
 function musicPosition(){return state.music.position+(state.music.playing?(Date.now()-state.music.changed)/1000:0);}
 function setStatus(phase,message){status={phase,message};send();}
 function disconnect(){epoch++;const old=live;live=null;availableGifts=[];catalogStatus='offline';try{old?.disconnect();}catch{}setStatus('offline','Desconectado · simulador disponível');}
@@ -47,7 +51,7 @@ async function connect(username){
   const known=availableGifts.find(g=>g.id===String(e.giftId));
   const ev=gift(state,{...e,diamondCount:giftPrice(e)??known?.coins,
    giftName:e.giftName||e.giftDetails?.giftName||e.extendedGiftInfo?.name||e.gift?.name||known?.name},Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
-  if(ev){if(ev.effect==='reset')activeDownload?.cancel();save();send();}});
+  if(ev){if(ev.effect==='reset'&&!ev.progress)activeDownload?.cancel();send();save();}});
  conn.on('chat',e=>{if(ticket===epoch&&comment(state,e))send();});
  conn.on('error',()=>{if(ticket===epoch)setStatus('error','Erro de conexão. Verifique a live e o provedor de assinatura.');});
  conn.on('disconnected',()=>{if(ticket===epoch){epoch++;live=null;availableGifts=[];catalogStatus='offline';setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');}});
@@ -61,7 +65,7 @@ function download(raw){
  if(activeDownload?.job.phase==='running')throw Error('Aguarde ou cancele o download atual.');
  const epoch=state.partyEpoch;
  activeDownload=startDownload(raw,{root:ROOT,musicDir:MUSIC,
- onUpdate:()=>send(),
+ onUpdate:()=>send(false),
  onComplete:file=>{if(epoch!==state.partyEpoch)return;activate(state.music,file);save();}});
  jobs.unshift(activeDownload.job);jobs=jobs.slice(0,8);send();
 }
@@ -89,9 +93,15 @@ const server=http.createServer(async(req,res)=>{
  case '/api/source-link':await publicSource.start();break;
  case '/api/source-link/stop':publicSource.stop();break;
  default:json(res,404,{error:'Endpoint desconhecido'});return;
- }save();send();json(res,200,{ok:true});return;}
+ }send();save();json(res,200,{ok:true});return;}
  if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Método inválido'});return;}
- if(url.pathname==='/api/state'){json(res,200,snapshot());return;}
+ if(url.pathname==='/api/state'){
+  if(url.searchParams.has('after')&&Number(url.searchParams.get('after'))===viewRevision){
+   const reply=()=>{clearTimeout(timer);stateWaiters.delete(reply);if(!res.destroyed)json(res,200,snapshot());};
+   const timer=setTimeout(reply,8000);stateWaiters.add(reply);
+   res.on('close',()=>{clearTimeout(timer);stateWaiters.delete(reply);});
+  }else json(res,200,snapshot());return;
+ }
  if(url.pathname==='/api/gifts'){
   const gifts=catalogStatus==='ready'?availableGifts:await loadGiftCatalog();
   json(res,200,{gifts,mapped:giftCatalog()});return;
@@ -111,7 +121,7 @@ const server=http.createServer(async(req,res)=>{
  headers['Content-Length']=end-start+1;res.writeHead(code,headers);if(req.method==='HEAD')res.end();else{const stream=fs.createReadStream(file,{start,end});stream.on('error',()=>res.destroy());stream.pipe(res);}
  }catch(e){if(!res.headersSent)json(res,400,{error:e.message});else res.end();}
 });
-setInterval(()=>{const before=state.people.length;prune(state);if(before!==state.people.length)save();send();},3000).unref();
+setInterval(()=>{const before=state.people.length;prune(state);const changed=before!==state.people.length;send(changed);if(changed)save();},3000).unref();
 async function probe(name){return new Promise(resolve=>{const child=spawn(tool(name),[name==='yt-dlp'?'--version':'-version'],{windowsHide:true,shell:false});const timer=setTimeout(()=>{child.kill();resolve(false);},30000);child.on('error',()=>{clearTimeout(timer);resolve(false);});child.on('close',code=>{clearTimeout(timer);resolve(code===0);});});}
 Promise.all([probe('yt-dlp'),probe('ffmpeg'),probe('ffprobe')]).then(found=>{audioReady=found.every(Boolean);send();});
 server.listen(port,'127.0.0.1',()=>console.log('RODA LIVE · http://localhost:'+port+' · Fonte Link: /overlay/festa?source=1&jogo=festa'));

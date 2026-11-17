@@ -1,21 +1,11 @@
-// A shared slow 3/4 clock marks the steps without making dancers jump.
-export const DANCE_BPM=72;
-export function waltzPose(time) {
- const beat=time*Math.PI*2*(DANCE_BPM/60),phase=beat/3;
- return {phase,rise:(1-Math.cos(phase))*.028+(1-Math.cos(beat))*.012,sway:Math.sin(phase)*.065,
-  forward:Math.sin(phase)*.16,side:Math.sin(phase*2)*.075,turn:time*.085+Math.sin(phase)*.025,
-  shoulder:Math.sin(beat)*.025,hips:Math.sin(phase)*.045,step:Math.sin(beat)*Math.abs(Math.sin(beat))*.19};
+export const DANCE_BPM=144;
+export function waltzPose(time,variant=0) {
+ const beat=time*Math.PI*2*(DANCE_BPM/60),phase=beat/4,offset=variant*Math.PI/4;
+ return {phase,rise:(1-Math.cos(beat+offset))*.06,sway:Math.sin(beat*.5+offset)*.11,
+  forward:Math.sin(phase+offset)*.1,side:Math.sin(beat*.5+offset)*.12,turn:Math.sin(phase+offset)*.3,
+  shoulder:Math.sin(beat+offset)*.055,hips:Math.sin(beat*.5+offset)*.11,step:Math.sin(beat+offset)*.4};
 }
-export function coupleWaltzPose(time,role){
- const pose=waltzPose(time),side=role==='bride'?-1:1;
- return {x:side*.58*Math.cos(pose.turn)+pose.side*.4,z:-side*.58*Math.sin(pose.turn)+pose.forward*.3,
-  rotation:pose.turn-side*Math.PI/2};
-}
-export function floorWaltzPosition(index,count,radius,time,{solo=false}={}) {
- const pose=waltzPose(time),pair=Math.floor(index/2),pairs=Math.ceil(count/2);
- const angle=(solo?index/count:pair/pairs)*Math.PI*2+time*.055;
- const unpaired=solo||index===count-1&&count%2===1,turn=pose.turn+(index%2)*Math.PI;
- const reach=unpaired?0:.58;
- return {x:Math.sin(angle)*(radius+pose.forward)+Math.cos(turn)*reach+pose.side,
-  z:Math.cos(angle)*(radius+pose.forward)+Math.sin(turn)*reach,rotation:-turn-Math.PI/2};
+export function soloWeddingPose(time,role){
+ const pose=waltzPose(time,role==='bride'?1:4),side=role==='bride'?-1:1;
+ return {x:side*1.3+pose.side*.25,z:.35+pose.forward*.25,rotation:pose.turn};
 }

@@ -7,11 +7,11 @@ import {spawn} from 'node:child_process';
 
 const here=fileURLToPath(import.meta.url);
 const publicAssets=new Set(['overlay.html','overlay.css','overlay.js','scene3d.js','roach.js','instruments.js','layout.js',
- 'camera-director.js','party-layout.js','backstage.js','capture-profile.js','gift-catalog.js','gift-artwork.js','waltz.js','wedding-decor.js','club-room.js'].map(p=>'/'+p));
+ 'camera-director.js','party-layout.js','backstage.js','capture-profile.js','gift-catalog.js','gift-artwork.js','waltz.js','spiral-layout.js','wedding-decor.js','club-room.js'].map(p=>'/'+p));
 export function overlaySnapshot(s){
  const {schemaVersion,partyEpoch,couple,stage,people,log,roses,music,track,giftCatalog,catalogStatus,serverTime}=s;
  const {title,subtitle,speed,comments,transparent}=s.settings;
- return {schemaVersion,partyEpoch,couple,stage,people,log,roses,track,giftCatalog,catalogStatus,serverTime,
+ return {revision:s.revision,schemaVersion,partyEpoch,couple,stage,people,log,roses,track,giftCatalog,catalogStatus,serverTime,
   settings:{title,subtitle,speed,comments,transparent},music:{...music,queue:[]}};
 }
 const reply=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -19,7 +19,7 @@ const equal=(a,b)=>Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(
 
 // Only this gateway is published. The controller and downloader stay on loopback.
 export function createOverlayGateway({token,assetPort,getSnapshot,onMusic}){
- let publicOrigin='';
+ let publicOrigin='';const waiters=new Set();
  const server=http.createServer(async(req,res)=>{
   try{
    const url=new URL(req.url,'http://127.0.0.1'),p=url.pathname;
@@ -29,7 +29,13 @@ export function createOverlayGateway({token,assetPort,getSnapshot,onMusic}){
    if(!entry&&!equal(cookie,token)){reply(res,403,{error:'Abra o link completo do overlay.'});return;}
    if(entry&&req.method==='GET')res.setHeader('Set-Cookie','roda_view='+token+'; HttpOnly; Secure; SameSite=None; Path=/');
    res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Content-Type-Options','nosniff');
-   if(p==='/api/state'&&req.method==='GET'){reply(res,200,overlaySnapshot(getSnapshot()));return;}
+   if(p==='/api/state'&&req.method==='GET'){
+    if(url.searchParams.has('after')&&Number(url.searchParams.get('after'))===getSnapshot().revision){
+     const flush=()=>{clearTimeout(timer);waiters.delete(flush);if(!res.destroyed)reply(res,200,overlaySnapshot(getSnapshot()));};
+     const timer=setTimeout(flush,8000);waiters.add(flush);
+     res.on('close',()=>{clearTimeout(timer);waiters.delete(flush);});
+    }else reply(res,200,overlaySnapshot(getSnapshot()));return;
+   }
    if(p==='/api/music'&&req.method==='POST'){
     if(req.headers.origin&&req.headers.origin!==publicOrigin){reply(res,403,{error:'Origem inválida'});return;}
     if(!req.headers['content-type']?.startsWith('application/json')){reply(res,415,{error:'Use JSON'});return;}
@@ -49,7 +55,7 @@ export function createOverlayGateway({token,assetPort,getSnapshot,onMusic}){
    req.on('aborted',()=>upstream.destroy());res.on('close',()=>upstream.destroy());upstream.end();
   }catch(e){if(!res.headersSent)reply(res,400,{error:e.message});else res.destroy();}
  });
- return {server,setOrigin(origin){publicOrigin=origin;}};
+ return {server,notify(){for(const flush of [...waiters])flush();},setOrigin(origin){publicOrigin=origin;}};
 }
 
 async function cloudflared(root){
@@ -115,7 +121,7 @@ export function createPublicSource({root,assetPort,getSnapshot,onMusic,onChange=
   })();return starting;
  }
  process.once('exit',()=>worker?.stdin.end('stop\n'));
- return {start,stop,status};
+ return {start,stop,status,notify(){gateway?.notify();}};
 }
 
 if(process.argv[2]==='--tunnel-worker'){

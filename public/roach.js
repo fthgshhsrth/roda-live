@@ -125,17 +125,16 @@ export function makeRoach(person){
   get weddingRole(){return ['groom','bride'].includes(role)?role:null;},get stageRole(){return role;},get instrument(){return instrumentId;},
   get isGreeting(){return greetingActive;},get greetingArm(){return limbs.find(l=>l.row===0&&l.side===1).pivot;},
   animate(t,person,now,beat=0,greeting=false){
-   greetingActive=greeting;const playing=role==='band'||role==='dj',wedding=role==='bride'||role==='groom',waltz=waltzPose(t),phase=playing?t*3:waltz.phase,effect=person.effectUntil>now?person.effect:'';
+   greetingActive=greeting;const playing=role==='band'||role==='dj',waltz=waltzPose(t,variant),phase=playing?t*3:waltz.phase,effect=person.effectUntil>now?person.effect:'';
    dancer.position.y=(playing?Math.abs(Math.sin(phase))*.025:waltz.rise)+(effect==='jump'?Math.abs(Math.sin(t*8))*.7:0);
    dancer.position.x=playing?0:waltz.side*.3;dancer.rotation.z=playing?Math.sin(phase)*.025:waltz.sway;
    dancer.rotation.x=playing?Math.cos(phase)*.018:waltz.shoulder;dancer.rotation.y=playing?0:waltz.hips;
    root.rotation.y=playing?Math.sin(phase*.3)*.08:waltz.turn;
    for(const {pivot,side,row,hand} of limbs){
     pivot.rotation.y=0;
-    pivot.rotation.z=row===2?side*waltz.step*.23:side*(-.5+waltz.sway);
-    pivot.rotation.x=row===2?side*waltz.step:-.35+Math.cos(phase)*.08;
+    pivot.rotation.z=row===2?side*(playing?.02:waltz.step*.23):side*(-.35+waltz.sway*1.8);
+    pivot.rotation.x=row===2?side*(playing?Math.sin(t*3)*.04:waltz.step):-.35+Math.cos(phase+variant)*.22;
     if(hand){hand.rotation.set(0,0,0);hand.scale.set(.066,.085,.045);}
-    if(wedding&&row===0){pivot.rotation.y=-side*1.1;pivot.rotation.z=-side*.12+waltz.sway*.3;pivot.rotation.x=-.15+(side<0?-.12:.2);}
     if(prop&&row===0){pivot.rotation.z=side*-.45;pivot.rotation.x=-.6;
      if(instrumentId==='drums'){pivot.rotation.x=-.5+Math.sin(t*9+side)*.3;}
      if(instrumentId==='harmonica'){pivot.rotation.z=side*.85;pivot.rotation.x=-.45;}

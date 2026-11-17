@@ -6,7 +6,8 @@ import {sceneCast} from './party-layout.js';
 import {addBackstage} from './backstage.js';
 import {captureProfile} from './capture-profile.js';
 import {renderGiftCatalog} from './gift-catalog.js';
-import {coupleWaltzPose,floorWaltzPosition} from './waltz.js';
+import {soloWeddingPose} from './waltz.js';
+import {SpiralLayout} from './spiral-layout.js';
 import {addWeddingDecor} from './wedding-decor.js';
 import {addClubRoom} from './club-room.js';
 
@@ -109,11 +110,9 @@ for (let i = 0; i < 48; i++) {
   const tile = mesh(new THREE.BoxGeometry(.16, .018, .45), new THREE.MeshBasicMaterial({color: i % 2 ? '#c786ac' : '#ffb180'}), .003);
   const a = i / 48 * Math.PI * 2; tile.position.set(Math.sin(a) * 7.48, .003, Math.cos(a) * 7.48); tile.rotation.y = a;
 }
-const consoleBase = mesh(new THREE.CylinderGeometry(1.15, 1.35, .48, 32), new THREE.MeshStandardMaterial({color: '#171124', metalness: .6, roughness: .25}), .22);
-const consoleTop = mesh(new THREE.CylinderGeometry(1.13, 1.13, .08, 32), new THREE.MeshStandardMaterial({color: '#d3a8b4', metalness: .8, roughness: .22}), .5);
-for (const x of [-.5, .5]) {
-  const disc = mesh(new THREE.CylinderGeometry(.35, .35, .04, 24), new THREE.MeshStandardMaterial({color: '#20192d', metalness: .9, roughness: .17}), .56); disc.position.x = x;
-}
+const danceFloor=new THREE.Group();for(const object of [...stage.children])danceFloor.add(object);stage.add(danceFloor);
+const consoleBase = mesh(new THREE.CylinderGeometry(2.3, 2.4, .48, 48), new THREE.MeshStandardMaterial({color: '#171124', metalness: .6, roughness: .25}), .22);
+const consoleTop = mesh(new THREE.CylinderGeometry(2.28, 2.28, .08, 48), new THREE.MeshStandardMaterial({color: '#d3a8b4', metalness: .8, roughness: .22}), .5);
 const disco = mesh(new THREE.IcosahedronGeometry(.56, 2), new THREE.MeshStandardMaterial({color: '#d8c5e4', metalness: .95, roughness: .19}), 5.6);
 const wire = mesh(new THREE.CylinderGeometry(.012, .012, 2.2, 6), new THREE.MeshBasicMaterial({color: '#807087'}), 7.25);
 disco.position.set(-7.8,6,-5);wire.position.set(-7.8,7.65,-5);
@@ -121,10 +120,16 @@ const positions = new Float32Array(96 * 3);
 for (let i = 0; i < 96; i++) { positions[i * 3] = Math.sin(i * 137.5) * (8 + i % 4); positions[i * 3 + 1] = (i % 13) * .65 + .2; positions[i * 3 + 2] = Math.cos(i * 137.5) * 8; }
 const particlesGeometry = new THREE.BufferGeometry(); particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 const particles = new THREE.Points(particlesGeometry, new THREE.PointsMaterial({color: '#eac2df', size: .045, transparent: true, opacity: .6})); scene.add(particles);
-addBackstage(scene);
+const backstage=addBackstage(scene);
 const weddingDecor=addWeddingDecor(scene);
 
 let viewport = {width: 1, height: 1, top: 0, left: 0};
+const danceLayout=new SpiralLayout();
+function frameOverview(){
+  const radius=danceLayout.radius,distance=Math.max(34,(radius+2.5)*3.1,(radius+2.5)*3.1/camera.aspect);
+  overviewAim.set(0,1,-radius*.12);overviewPosition.set(1,distance*.64,distance*.83-radius*.12);
+  camera.far=Math.max(180,radius*14+120);camera.updateProjectionMatrix();
+}
 function resize() {
   const bounds = $('viewport').getBoundingClientRect(); viewport = bounds;
   const profile = captureProfile(bounds.width,bounds.height,{high,preview,dpr:devicePixelRatio||1});
@@ -132,8 +137,7 @@ function resize() {
   keyLight.shadow.mapSize.set(profile.shadowSize,profile.shadowSize);
   if(keyLight.shadow.map){keyLight.shadow.map.dispose();keyLight.shadow.map=null;}
   camera.aspect = bounds.width / bounds.height;
-  const distance = sourceMode?Math.max(27,23/camera.aspect):Math.max(31,28/camera.aspect);
-  overviewPosition.set(1, distance * .64, distance * .83-2.5);
+  frameOverview();
   if (!cameraInitialized) {camera.position.copy(overviewPosition); cameraAim.copy(overviewAim); cameraInitialized = true;}
   camera.lookAt(cameraAim); camera.updateProjectionMatrix();
 }
@@ -141,7 +145,24 @@ new ResizeObserver(resize).observe($('viewport'));
 $('quality').onclick = () => { high = !high; renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
   $('quality').textContent = high ? 'Qualidade: Full HD' : 'Qualidade: leve'; resize(); };
 const characters = new Map();
+function positionCharacter(entry){
+  const root=entry.model.root,person=entry.person;
+  if(!person.stageResident){
+    const pose=danceLayout.position(person.id,elapsed);root.position.set(pose.x,.03,pose.z);
+    root.scale.setScalar(.83+(entry.model.seed%4)*.065);return pose;
+  }
+  root.position.set(...person.position);root.scale.setScalar(person.stageRole==='band'?1:.95);
+  const extra=Math.max(0,danceLayout.radius-8.3);
+  if(person.stageRole==='band')root.position.z-=extra;
+  if(person.stageRole==='dj'){root.position.x+=extra;root.position.z-=extra*.45;}
+  if(['bride','groom'].includes(person.stageRole)){
+    const pose=soloWeddingPose(elapsed,person.stageRole);root.position.set(pose.x,.55,pose.z);return pose;
+  }
+}
 function reconcile(people) {
+  danceLayout.sync(people.filter(p=>!p.stageResident).map(p=>p.id));
+  const radius=danceLayout.radius;danceFloor.scale.set(radius/7.8,1,radius/7.8);
+  clubRoom.scale.set(Math.max(1,radius/12),1,Math.max(1,radius/12));backstage.layout(radius);frameOverview();
   const ids = new Set(people.map(p => p.id));
   for (const [id, entry] of characters) if (!ids.has(id)) {
     scene.remove(entry.model.root); entry.model.dispose(); entry.name.remove(); entry.bubble.remove(); entry.line.remove(); characters.delete(id);
@@ -159,6 +180,7 @@ function reconcile(people) {
     entry.person = person; entry.name.textContent = (person.donor?(person.icon||'🌹')+' ':'')+person.name;
     entry.name.classList.toggle('donor-name',!!person.donor);entry.name.classList.toggle('role-placeholder',!!person.stageResident&&!person.donor);
     entry.model.setRole(person.stageRole||null,person.instrument||null);
+    positionCharacter(entry);
   }
   renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
 }
@@ -168,6 +190,7 @@ function showEventToast(message, entry = false) {
   $('eventToast').textContent = message;
   $('eventToast').classList.toggle('entry-notice', entry);
   toastUntil = Date.now() + 3500;
+  $('eventToast').classList.add('visible');
   if (entry) toastProtectedUntil = Date.now() + 3000;
 }
 function updateState(next) {
@@ -198,15 +221,16 @@ function updateState(next) {
     if(event.effect==='reset'){
       resetUntil=Date.now()+6500;$('finaleName').textContent=event.name+' reiniciou a festa!';showEventToast('🎆 '+event.message,true);
     }
-    else if (['marry','bride','band','dj'].includes(event.effect)) director.feature(event, performance.now());
-    else if (event.effect === 'join') director.rose(event, performance.now());
+    else if (['marry','bride','band','dj'].includes(event.effect)){showEventToast(event.icon+' '+event.message,true);director.feature(event, performance.now());}
+    else if (event.effect === 'join'){showEventToast(roseNotice(event),true);director.rose(event, performance.now());}
     else if (Date.now() >= toastProtectedUntil) showEventToast(event.icon + ' ' + event.message);
   }
   receivedSnapshot = true;
   if (seenEvents.size > 200) {seenEvents.clear(); next.log.forEach(event => seenEvents.add(event.id));}
 }
 if(sourceMode){
- const poll=async()=>{try{const r=await fetch('/api/state',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error();updateState(await r.json());}catch{$('offline').hidden=false;}finally{setTimeout(poll,750);}};void poll();
+ let revision=-1;
+ const poll=async()=>{let delay=0;try{const r=await fetch('/api/state?after='+revision,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error();const next=await r.json();revision=next.revision??-1;updateState(next);if(revision===-1)delay=200;}catch{$('offline').hidden=false;delay=500;}finally{setTimeout(poll,delay);}};void poll();
 }else{
  const events = new EventSource('/events');events.onmessage=e=>updateState(JSON.parse(e.data));events.onerror=()=>$('offline').hidden=false;
 }
@@ -215,7 +239,7 @@ function project(x, y, z) {
   return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2, visible: v.z >= -1 && v.z <= 1};
 }
 function moveCamera(time, dt, entries) {
-  const selectable=entries.filter(entry=>entry.person.donor||entry.person.demo);
+  const donors=entries.filter(entry=>entry.person.donor||entry.person.demo),selectable=donors.length?donors:entries;
   const recentIds=[...selectable].sort((a,b)=>Math.max(b.person.joinedAt||0,b.person.lastGiftAt||0)-Math.max(a.person.joinedAt||0,a.person.lastGiftAt||0)).map(entry=>entry.person.id);
   const roles=Object.fromEntries(selectable.map(entry=>[entry.person.id,entry.person.stageRole]));
   shot = director.update(time, selectable.map(entry => entry.person.id),{groomId:state.couple?.groomId,recentIds,roles});
@@ -226,20 +250,20 @@ function moveCamera(time, dt, entries) {
     desiredAim.set(root.position.x,root.position.y+1.5 * scale + featured.model.dancer.position.y * .3, root.position.z);
     const distance = Math.max(5.6, 4.2 / camera.aspect) * Math.max(.85, scale);
     desiredCamera.copy(desiredAim).add(new THREE.Vector3(.65, 2.1 * scale, distance));
-    if(['bride','groom'].includes(featured.person.stageRole)){
-      desiredAim.set(1.1,1.65,-.35);desiredCamera.copy(desiredAim).add(new THREE.Vector3(.15,3.2,Math.max(10,7.4/camera.aspect)));
+    if(featured.person.stageRole==='groom'){
+      desiredAim.set(2.35,1.65,-.4);desiredCamera.copy(desiredAim).add(new THREE.Vector3(.15,3.2,Math.max(10,7.8/camera.aspect)));
     }else if(featured.person.stageRole==='band'||featured.person.stageRole==='dj'){
       desiredCamera.copy(desiredAim).add(new THREE.Vector3(.35,2.1,Math.max(7,4.5/camera.aspect)));
     }
   }
-  const blend = 1 - Math.exp(-dt * 3.2);
+  const motion=time/1000;
+  desiredCamera.x+=Math.sin(motion*.65)*(shot.mode==='overview'?danceLayout.radius*.18:.45);
+  desiredCamera.y+=Math.sin(motion*.8)*.3;desiredCamera.z+=Math.cos(motion*.5)*.5;
+  const blend = 1 - Math.exp(-dt * 6);
   camera.position.lerp(desiredCamera, blend); cameraAim.lerp(desiredAim, blend); camera.lookAt(cameraAim);
   if (shownShot !== shot.token) {
     shownShot = shot.token;
     for (const entry of entries) entry.name.classList.toggle('camera-focus', entry.person.id === shot.targetId);
-    if (shot.mode === 'focus' && shot.reason === 'rose') showEventToast(roseNotice(shot.event), true);
-    if (shot.mode === 'focus' && shot.reason === 'marry') showEventToast('💍 '+shot.event.name+' se casou! É o novo noivo!',true);
-    if(shot.mode==='focus'&&shot.reason==='role')showEventToast(shot.event.icon+' '+shot.event.message,true);
   }
 }
 let projected = [], bubbleBoxes = [];
@@ -292,30 +316,16 @@ function draw(time) {
   elapsed += dt * (state.settings.speed ?? 1); frame++;
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;
   if (analyser && !audio.paused) { analyser.getByteFrequencyData(frequency); beat = frequency.slice(0, 10).reduce((a, b) => a + b, 0) / 2550; }
-  const entries = [...characters.values()], dancers=entries.filter(entry=>!entry.person.stageResident),n=dancers.length;
-  const counts = n <= 12 ? [n] : [Math.ceil(n*.56),Math.floor(n*.44)];
-  let index = 0;
-  counts.forEach((count, ring) => {
-    const radius = counts.length === 1 ? 5.2 : [6.6,4.9][ring];
-    for (let i = 0; i < count; i++) {
-      const entry = dancers[index++]; if (!entry) continue;
-      const pose=floorWaltzPosition(i,count,radius,elapsed,{solo:!!entry.person.ambient});
-      entry.model.root.position.set(pose.x,.03,pose.z);
-      const baseScale = .83 + (entry.model.seed % 4) * .065;
-      entry.model.root.scale.setScalar(baseScale * (n > 30 ? .68 : n > 12 ? .85 : 1));
+  const entries = [...characters.values()], dancers=entries.filter(entry=>!entry.person.stageResident);
+  for(const entry of dancers){
+      const pose=positionCharacter(entry);
       const greeting = shot.reason === 'rose' && shot.targetId === entry.person.id && !!shot.event?.entered;
       entry.model.animate(elapsed, entry.person, Date.now() + offset, beat, greeting);
       if(!greeting)entry.model.root.rotation.y=pose.rotation;
-    }
-  });
+  }
   for(const entry of entries.filter(entry=>entry.person.stageResident)){
-    entry.model.root.position.set(...entry.person.position);
-    entry.model.root.scale.setScalar(entry.person.stageRole==='band'?1:.95);entry.model.animate(elapsed,entry.person,Date.now()+offset,beat);
-    if(['bride','groom'].includes(entry.person.stageRole)){
-      const pose=coupleWaltzPose(elapsed,entry.person.stageRole);
-      entry.model.root.position.set(pose.x,.55,pose.z);
-      entry.model.root.rotation.y=pose.rotation;
-    }
+    const pose=positionCharacter(entry);entry.model.animate(elapsed,entry.person,Date.now()+offset,beat);
+    if(pose)entry.model.root.rotation.y=pose.rotation;
   }
   moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;
@@ -327,6 +337,7 @@ function draw(time) {
   $('finale').hidden=Date.now()>=resetUntil;document.body.classList.toggle('party-reset',Date.now()<resetUntil);
 }
 window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls,
+  spiralRadius:danceLayout.radius,
   renderWidth:renderer.domElement.width,renderHeight:renderer.domElement.height,
   visibleNames:[...characters.values()].filter(e=>!e.name.hidden).length,
   characters: characters.size, obstacles: projected, bubbles: bubbleBoxes, bubbleOverlap: bubbleBoxes.some(b => projected.some(p => overlaps(b, p))),

@@ -7,7 +7,8 @@ async function api(endpoint,data={}){const r=await fetch('/api/'+endpoint,{metho
 function action(fn){return async e=>{e?.preventDefault();try{await fn(e);}catch(err){toast(err.message);}};}
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function button(text,fn,cls='quiet'){const b=el('button',text,cls);b.type='button';b.onclick=action(fn);return b;}
-function loadSettings(s){for(const k of ['title','subtitle','duration','speed','capacity'])$(k).value=s[k];for(const k of ['comments','transparent'])$(k).checked=s[k];rules=structuredClone(s.rules);renderRules();settingsLoaded=true;}
+function localOverlay(orientation='portrait'){const link=new URL('/overlay.html',location.origin);link.searchParams.set('source','1');link.searchParams.set('format',orientation);return link.href;}
+function loadSettings(s){for(const k of ['title','subtitle','duration','speed'])$(k).value=s[k];for(const k of ['comments','transparent'])$(k).checked=s[k];rules=structuredClone(s.rules);renderRules();settingsLoaded=true;}
 function renderRules(){
  $('ruleRows').replaceChildren();const effects={join:'Entrar / renovar',marry:'Noivo',bride:'Noiva',band:'Banda',dj:'DJ',reset:'Reiniciar festa'};
  rules.forEach((r,i)=>{
@@ -25,9 +26,7 @@ function renderRules(){
 let peopleKey='',logKey='',jobKey='',giftKey='';
 function render(s){
  state=s;const ready=document.getElementById('audioStatus');if(ready){ready.textContent=s.audioReady?'● Downloader pronto · yt-dlp + FFmpeg':'○ Downloader precisa de yt-dlp + FFmpeg · veja INSTALAR-AUDIO.ps1';ready.style.color=s.audioReady?'#d6fb79':'#dab67a';}if(!settingsLoaded)loadSettings(s.settings);
- const source=s.sourceLink||{phase:'offline',message:'Link HTTPS desligado'};
- $('sourceURL').value=source.url||'';$('sourceStatus').textContent=source.message;
- $('startSource').disabled=source.phase==='starting';$('stopSource').hidden=source.phase!=='online';
+ $('sourceURL').value=localOverlay();$('sourceStatus').textContent='Link local restaurado. Mantenha o servidor aberto neste computador.';
  const confirmed=(s.giftCatalog||[]).filter(g=>g.status==='verified').length;
  $('catalogSummary').textContent=s.catalogStatus==='ready'?confirmed+'/6 presentes confirmados. '+(s.giftCatalog||[]).filter(g=>g.status!=='verified').map(g=>giftActions[g.effect]+': '+(g.status==='ambiguous'?'selecione o item':'presente indisponível')).join(' · '):s.catalogStatus==='loading'?'Carregando catálogo automaticamente…':s.catalogStatus==='error'?'Falha no catálogo. Clique em Presentes da live para tentar novamente.':'Conecte a live para confirmar nomes, imagens, IDs e moedas automaticamente.';
  $('status').textContent=s.status.message;$('statusLed').style.background=s.status.phase==='online'?'#d6fb79':s.status.phase==='error'?'#ff8484':'#899578';
@@ -46,7 +45,7 @@ const events=new EventSource('/events');events.onmessage=e=>{render(JSON.parse(e
 $('connectForm').onsubmit=action(()=>api('connect',{username:$('username').value}));
 $('disconnect').onclick=action(()=>api('disconnect'));
 $('commentForm').onsubmit=action(()=>api('simulate',{kind:'comment',user:$('testUser').value.trim()||'Visitante',comment:$('testComment').value}));
-$('settingsForm').onsubmit=action(async()=>{const b={};for(const k of ['title','subtitle','duration','speed','capacity'])b[k]=$(k).value;for(const k of ['comments','transparent'])b[k]=$(k).checked;await api('settings',b);toast('Configurações salvas');});
+$('settingsForm').onsubmit=action(async()=>{const b={};for(const k of ['title','subtitle','duration','speed'])b[k]=$(k).value;for(const k of ['comments','transparent'])b[k]=$(k).checked;await api('settings',b);toast('Configurações salvas');});
 $('saveRules').onclick=action(async()=>{await api('settings',{rules});toast('Mapa de presentes salvo');});
 $('clear').onclick=action(async()=>{if(confirm('Limpar participantes, rosas e histórico desta sessão?'))await api('clear');});
 $('downloadForm').onsubmit=action(async()=>{await api('download',{url:$('videoURL').value});toast('Download iniciado. O MP3 tocará automaticamente na cena.');});
@@ -61,10 +60,9 @@ $('loadCatalog').onclick=action(async()=>{
  catalog=j.gifts;renderRules();toast('Catálogo carregado. Selecione os presentes e salve o mapa.');
 });
 for(const [id,orientation] of [['copyPortrait','portrait'],['copyLandscape','landscape']])$(id).onclick=action(async()=>{
- const link=new URL(state?.sourceLink?.url||location.origin+'/overlay/festa?jogo=festa&source=1');link.searchParams.set('format',orientation);const url=link.href;
+ const url=localOverlay(orientation);$('sourceURL').value=url;
  try{await navigator.clipboard.writeText(url);toast('Link copiado. Fonte Link: '+(orientation==='portrait'?'1080 × 1920':'1920 × 1080')+'.');}
  catch{window.prompt('Copie o link da fonte:',url);}
 });
-$('startSource').onclick=action(async()=>{await api('source-link');render(await(await fetch('/api/state')).json());toast('Link HTTPS pronto. Copie o link vertical para o LIVE Studio.');});
-$('stopSource').onclick=action(()=>api('source-link/stop'));
+$('startSource').onclick=()=>{render(state);toast('Link local restaurado. Visual e configurações mantidos.');};
 $('sourceURL').onclick=()=>{$('sourceURL').select();};

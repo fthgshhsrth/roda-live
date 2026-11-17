@@ -24,19 +24,21 @@ Os valores da tabela são os configurados para esta festa, não uma garantia do 
 - A banda tem **sanfona, vitrola, bateria, gaita e saxofone**. Os cinco músicos ficam em um palco atrás da roda, ainda visível na visão geral.
 - As primeiras cinco rosquinhas de doadores diferentes ocupam as cinco posições. Depois, novos doadores substituem as posições em rodízio. Um mesmo doador não ocupa duas posições.
 - O boné coloca o doador no posto de DJ, com console e fones.
-- Cada pessoa ocupa um único papel. Ao assumir outro, libera o anterior. Um substituído retorna à roda se houver vaga; caso contrário, sai da cena.
+- Cada pessoa ocupa um único papel. Ao assumir outro, libera o anterior. Um substituído retorna à roda. Não existe limite fixo de entrada; a permanência configurável continua renovada pelas rosas.
 - Papéis especiais não expiram pelo tempo normal da roda. O nome aparece no personagem em destaque; comentários exibem o autor e ficam limitados a dois balões sem sobreposição.
 - A Serenata de 2999 reinicia participantes, casal, banda, DJ, contadores e áudio. Mantém o mapa de presentes, as configurações, a conexão e os arquivos de música locais. O nome de quem reiniciou aparece no aviso.
 
-A câmera faz closes suaves, prioriza papéis recém-assumidos e participantes recentes, e volta ao noivo periodicamente. A visão geral enquadra roda, palco e DJ. Na entrada por rosa, o personagem acena para a câmera. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.
+A câmera alterna planos gerais e closes aleatórios a cada poucos segundos, inclusive enquanto só há convidados de ambiente. O presente mais recente interrompe o enquadramento anterior imediatamente. Na entrada por rosa, o personagem acena para a câmera e o aviso aparece ao receber o evento. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.
 
-A pista dança em ritmo lento de 72 BPM, com compasso 3/4 compartilhado, passos marcados, balanço dos ombros e transferência suave de peso. Os noivos ficam próximos, frente a frente, com braços voltados para o par e movimentos sincronizados. O relógio da coreografia é compartilhado; o arquivo de música não passa por detecção automática de BPM. Os músicos animam os instrumentos e o DJ opera o console, separados da valsa. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
+A pista dança individualmente a 144 BPM, com passos mais rápidos e variações por personagem. Noivo e noiva também dançam separados e voltados para a câmera. A distribuição usa uma espiral que cresce com as entradas, mantém posições estáveis e pelo menos 3,2 unidades entre os personagens. Piso, salão, palco e enquadramento acompanham a expansão. Não há teto artificial de participantes; a capacidade prática depende da GPU. O arquivo de música não passa por detecção automática de BPM. Banda e DJ mantêm suas animações nos postos separados.
+
+Presentes em combo são processados desde a primeira unidade: entrar, alertar e focar não aguardam o fim da sequência. Atualizações seguintes contam somente o incremento e não repetem o aviso nem reassumem papéis.
 
 A festa mantém dez convidados de ambiente enquanto houver poucos participantes. Eles dançam avulsos, usam roupas e acessórios diferentes e não têm nomes, presentes, comentários ou papéis de doadores. Conforme chegam participantes reais, esses convidados cedem lugar. O contador inclui apenas participantes reais. O reinício restaura a composição de ambiente.
 
 O catálogo do overlay mostra ícones, funções e moedas, sem “a confirmar”. A conexão, eventuais itens indisponíveis e a validação dos IDs continuam visíveis no painel. Remover o texto do overlay não transforma o modo local em uma conexão TikTok confirmada.
 ## Cenário do casamento
-Um bolo de três andares, com cobertura, detalhes dourados, flores e alianças no topo, fica ao lado dos noivos. A câmera dos noivos inclui o bolo no enquadramento. A pista reserva o centro para o casal e o bolo; convidados dançam nos anéis externos.
+Um bolo de três andares, com cobertura, detalhes dourados, flores e alianças no topo, fica ao lado dos noivos. A câmera do noivo inclui o bolo no enquadramento. A pista reserva o centro para os dois personagens e o bolo; convidados dançam na espiral externa.
 
 Cinco globos espelhados com brilho suave giram pelo salão, além do globo já existente. Dois refletores de balada varrem a pista com feixes visíveis, manchas coloridas no chão e transições suaves entre azul, rosa e outras cores, sem efeito estroboscópico. A iluminação de base continua quente. As roupas e acessórios continuam variados, com tecidos mais sóbrios e a aparência da carapaça preservada. Banda e DJ permanecem em seus postos e mantêm as animações dos instrumentos.
 ## Executar
@@ -52,19 +54,19 @@ Cena: http://localhost:3000/overlay.html
 
 No Windows, **INICIAR.bat** mantém o servidor no terminal. **ABRIR-LIVE.bat** inicia o servidor se necessário e abre a cena em uma janela dedicada de Edge/Chrome, sem barra de endereço.
 
-## TikTok Live Studio — fonte Link HTTPS
+## TikTok Live Studio — link local restaurado
 1. Execute **INICIAR.bat** e abra o painel em http://localhost:3000.
-2. Clique em **Gerar link HTTPS** e depois em **Copiar link vertical**.
-3. No LIVE Studio, adicione uma fonte **Link**, cole o endereço e ative a resolução personalizada **1080 × 1920**, com o som da fonte ligado. Para horizontal, copie o link horizontal e use **1920 × 1080**.
+2. Use **Copiar link vertical**. O painel voltou a usar `http://localhost:3000/overlay.html?source=1&format=portrait`, sem substituir o endereço por um túnel externo.
+3. Utilize o link local no fluxo que já funcionava no seu LIVE Studio, com **1080 × 1920** e áudio da cena. Para horizontal, copie o link horizontal e use **1920 × 1080**. O visual, os presentes e as configurações permanecem preservados.
 4. Ajuste a fonte à tela preservando a proporção. Não amplie uma fonte criada em 800 × 600 para preencher uma transmissão vertical.
 
 A saída usa canvas em tela inteira, cenário cobrindo o quadro, antialiasing e 30 FPS como alvo na fonte Link. O painel conserva a prévia silenciosa. A composição se adapta ao tamanho real da fonte, com o catálogo sobreposto à direita e comentários procurando espaços livres.
 
-O botão cria um endereço HTTPS temporário do Cloudflare, sem exigir conta ou domínio. O link só funciona enquanto o servidor estiver ligado e muda quando você gerar outro. O serviço não oferece garantia de disponibilidade; para uma URL permanente é necessária hospedagem ou um túnel com domínio estável. O projeto baixa cloudflared 2026.11.1 no Windows e verifica o SHA-256 antes da primeira execução. Em outro sistema, defina CLOUDFLARED_PATH para um executável instalado.
+O painel não gera nem copia links externos automaticamente. O suporte anterior a túnel HTTPS permanece opcional na API `/api/source-link`, para compatibilidade, mas não substitui o endereço local. O túnel é temporário e não oferece garantia de aceitação pelo LIVE Studio.
 
-Somente a cena e a faixa em reprodução são publicadas pelo gateway. Painel, conexão TikTok, configurações e downloader permanecem locais. O link HTTPS usa consultas de estado, pois Quick Tunnels não suportam SSE. A cena pode enviar apenas os eventos de duração e fim da faixa; comandos de reprodução ficam no painel.
+Somente a cena e a faixa em reprodução são publicadas pelo gateway. Painel, conexão TikTok, configurações e downloader permanecem locais. O link HTTPS usa consultas de estado mantidas abertas por até oito segundos e respondidas assim que ocorre uma mudança; não há espera de 750 ms entre consultas. Quick Tunnels não suportam SSE. A cena pode enviar apenas os eventos de duração e fim da faixa; comandos de reprodução ficam no painel.
 
-O endereço local equivalente é `http://localhost:3000/overlay/festa?jogo=festa&source=1&format=portrait`. **ABRIR-LIVE.bat** continua disponível para prévia em janela. A qualidade de codificação e a resolução da transmissão continuam sendo controladas pelo LIVE Studio. Veja [configuração e limites](docs/live-studio.md).
+O caminho alternativo `/overlay/festa?source=1` continua compatível. **ABRIR-LIVE.bat** permanece disponível para prévia em janela. A qualidade de codificação e a resolução da transmissão continuam sendo controladas pelo LIVE Studio. Veja [configuração e limites](docs/live-studio.md).
 ## Música
 Instale yt-dlp, FFmpeg e ffprobe no PATH ou coloque os executáveis em tools/. INSTALAR-AUDIO.ps1 auxilia via winget no Windows.
 
@@ -81,7 +83,7 @@ npm test
 node qa-party.mjs
 ~~~
 
-Os testes de regras cobrem valores unitários, combos, papéis exclusivos, rodízio, substituições, limites, migração e reinício. A verificação visual usa Edge no Windows com WebGL2, testa os cinco instrumentos, casal, DJ, balões, troca de papéis e Serenata. Ela usa servidor e dados isolados na porta 3011, sem limpar a sessão de transmissão.
+Os testes cobrem valores unitários, combos imediatos sem contagem duplicada, papéis exclusivos, substituições, mil entradas, espaçamento da espiral, alternância da câmera, resposta do link, migração e reinício. A verificação visual usa Edge no Windows com WebGL2 e testa os instrumentos, dança individual, expansão sem colisões, tempo do alerta/foco, balões e Serenata nos formatos 1080 × 1920 e 1920 × 1080. Ela usa servidor e dados isolados na porta 3011, sem limpar a sessão de transmissão.
 
 As entradas antigas qa.mjs, qa-camera.mjs e qa-wedding.mjs encaminham ao teste atual. Resultados e capturas ficam em verificacao/, ignorados pelo Git. O teste não efetua compras nem envia presentes reais.
 
@@ -92,6 +94,7 @@ A captura dentro do TikTok Live Studio e os IDs efetivos dos presentes exigem co
 | --- | --- |
 | party.js / wheel.js | Regras dos presentes e estado da festa |
 | public/party-layout.js | Papéis e distribuição do elenco |
+| public/spiral-layout.js | Posições estáveis e expansão da pista sem sobreposição |
 | public/roach.js | Baratas humanoides, roupas e movimentos |
 | public/instruments.js | Sanfona, vitrola, bateria, gaita, sax e console |
 | public/backstage.js | Palco da banda e área do DJ |

@@ -18,7 +18,8 @@ export function addBackstage(scene){
  const ctx=canvas.getContext('2d');ctx.fillStyle='#ffcfaa';ctx.font='bold 90px sans-serif';ctx.textAlign='center';ctx.fillText('BANDA DO ARRAIÁ',512,110);
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
  const title=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));title.position.set(0,3.6,-11.45);title.scale.set(10,1.56,1);group.add(title);
- const platform=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.6,.6,40),dark);platform.position.set(8.6,.05,-5.8);platform.receiveShadow=true;group.add(platform);
- const rim=new THREE.Mesh(new THREE.TorusGeometry(1.5,.035,6,40),blue);rim.position.set(8.6,.36,-5.8);rim.rotation.x=-Math.PI/2;group.add(rim);
- return group;
+ const dj=new THREE.Group();scene.add(dj);
+ const platform=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.6,.6,40),dark);platform.position.set(8.6,.05,-5.8);platform.receiveShadow=true;dj.add(platform);
+ const rim=new THREE.Mesh(new THREE.TorusGeometry(1.5,.035,6,40),blue);rim.position.set(8.6,.36,-5.8);rim.rotation.x=-Math.PI/2;dj.add(rim);
+ return {layout(radius){const extra=Math.max(0,radius-8.3);group.position.z=-extra;dj.position.set(extra,0,-extra*.45);}};
 }
