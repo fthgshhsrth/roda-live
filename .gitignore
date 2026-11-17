@@ -1,0 +1,12 @@
+node_modules/
+data/
+tools/
+verificacao/
+music/*
+!music/.gitkeep
+.env
+.env.*
+!.env.example
+*.log
+Thumbs.db
+.DS_Store
