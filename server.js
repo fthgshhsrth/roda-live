@@ -63,7 +63,7 @@ function download(raw){
 }
 async function body(req){let text='';for await(const chunk of req){text+=chunk;if(text.length>65536)throw Error('Requisição muito grande');}return text?JSON.parse(text):{};}
 function json(res,code,data){res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.mp3':'audio/mpeg'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.mp3':'audio/mpeg','.webp':'image/webp'};
 const server=http.createServer(async(req,res)=>{
  try{
  const host=req.headers.host;if(!host||!/^((localhost|127\.0\.0\.1)(:\d+)?)$/.test(host)){json(res,403,{error:'Host não permitido'});return;}
@@ -98,7 +98,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='HEAD')res.end();else fs.createReadStream(vendor).pipe(res);return;
  }
  const isMusic=url.pathname.startsWith('/music/'),base=isMusic?MUSIC:PUB,relative=decodeURIComponent(isMusic?url.pathname.slice(7):url.pathname==='/'?'index.html':url.pathname.slice(1)),file=path.resolve(base,relative);
- if(!file.startsWith(base+path.sep)||!(isMusic?file.endsWith('.mp3'):['.html','.js','.css'].includes(path.extname(file)))){json(res,403,{error:'Arquivo não permitido'});return;}
+ if(!file.startsWith(base+path.sep)||!(isMusic?file.endsWith('.mp3'):['.html','.js','.css','.webp'].includes(path.extname(file)))){json(res,403,{error:'Arquivo não permitido'});return;}
  let stat;try{stat=fs.statSync(file);}catch{json(res,404,{error:'Arquivo não encontrado'});return;}if(!stat.isFile()){json(res,404,{error:'Arquivo não encontrado'});return;}
  const headers={'Content-Type':mime[path.extname(file)]||'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-cache'};let start=0,end=stat.size-1,code=200;
  if(req.headers.range){const m=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);if(!m){res.writeHead(416,{'Content-Range':'bytes */'+stat.size});res.end();return;}if(!m[1])start=Math.max(0,stat.size-Number(m[2]));else{start=Number(m[1]);if(m[2])end=Math.min(end,Number(m[2]));}if(start>end||start>=stat.size){res.writeHead(416,{'Content-Range':'bytes */'+stat.size});res.end();return;}code=206;headers['Content-Range']='bytes '+start+'-'+end+'/'+stat.size;}

@@ -4,13 +4,13 @@ O link vertical é `http://localhost:3000/overlay.html?studio=1&format=portrait#
 
 O modo padrão usa WebGL com antialiasing, buffer visando 1080 ou 1920 pixels de largura, limitado a 4096 pixels no lado maior e fator 3, sombras de 2048 pixels e até 60 FPS. O ritmo real depende da GPU. A prévia do painel tem resolução reduzida, 24 FPS e áudio silenciado. A fonte principal mantém seu próprio buffer; o modo leve usa 30 FPS e sem sombras.
 
-A festa ocupa 72–75% da altura, com cabeçalho mínimo e catálogo fora do palco. O nome aparece apenas no personagem em foco. Comentários incluem o autor, ficam limitados aos dois mais recentes e procuram espaço livre sem cobrir personagens, avisos ou catálogo. Se não houver espaço, o balão não aparece.
+A festa ocupa a área à esquerda, com cabeçalho mínimo e os seis presentes em uma coluna compacta à direita. O catálogo não cobre o palco. O nome aparece apenas no personagem em foco. Comentários incluem o autor, ficam limitados aos dois mais recentes e procuram espaço livre sem cobrir personagens, avisos ou catálogo. Se não houver espaço, o balão não aparece.
 
 ## Presentes corretos
 
 Ao conectar, o servidor consulta `fetchAvailableGifts()` do conector instalado e recebe os itens da sala. A correspondência exige ID selecionado ou nome equivalente exato, além do custo por unidade. O overlay usa nome, imagem e preço retornados, sem inventar IDs ou escolher apenas pelo preço. Itens não encontrados ficam indisponíveis; variantes ambíguas exigem seleção no painel. Na operação com catálogo confirmado, eventos usam apenas os IDs confirmados. O catálogo não é persistido entre conexões, para evitar usar itens de outra sala.
 
-`Heart Me` foi removido dos sinônimos de mãos fazendo coração. O preset aceita `Hand Heart`, `Heart Hands` e traduções configuradas, mas a confirmação depende do item da sala. A Serenata inclui a variante de nome `Serenata da Arraia`. A suposta rosa de 10 moedas só será habilitada se existir um item correspondente no catálogo; dez rosas de uma moeda continuam sendo entrada na roda.
+`Heart Me` foi removido dos sinônimos de mãos fazendo coração. O preset aceita `Hand Heart`, `Heart Hands` e traduções configuradas, mas a confirmação depende do item da sala. A Serenata inclui os nomes `Serenata da Arraia` e `Ray Serenade`. Os ícones de referência são arquivos originais do CDN do TikTok, incluindo a Rosa de 10 moedas e as arraias. Veja [origens das imagens](../public/gifts/SOURCES.md). Ao conectar, as imagens da sala substituem essas referências. A suposta rosa de 10 moedas só será habilitada se existir um item correspondente no catálogo; dez rosas de uma moeda continuam sendo entrada na roda.
 
 Os presentes e preços nos presets são a configuração pedida para o jogo; não foram validados na conta do criador porque nenhuma live estava conectada durante o desenvolvimento. No modo local, o catálogo sinaliza que é prévia. O simulador continua funcionando para os testes sem gastar moedas.
 
@@ -22,3 +22,8 @@ Os presentes e preços nos presets são a configuração pedida para o jogo; nã
 - [Documentação do conector instalado](https://github.com/zerodytrash/TikTok-Live-Connector#retrieve-available-gifts): API de catálogo, IDs, nomes e `diamond_count`. É um conector comunitário, não SDK oficial do TikTok.
 
 O overlay foi validado em navegador local nas duas orientações. A qualidade final de transmissão e a disponibilidade da fonte Link dependem do LIVE Studio e da conta; não são configuradas automaticamente pelo projeto.
+## Verificação no aplicativo instalado
+
+Em 17/11/2026, o TikTok LIVE Studio 1.39.6 foi aberto neste computador para testar a fonte. A tela inicial apresentou **Sem acesso**. Não foi iniciada transmissão nem alterada a conta. Não foi possível confirmar a qualidade dentro da captura ou salvar uma cena no aplicativo. Os testes de renderização e enquadramento são de navegador local, não evidência de transmissão no TikTok.
+
+O enquadramento do overlay está salvo no projeto e acompanha a fonte em 1080 × 1920 ou 1920 × 1080. Ainda será necessário adicionar/salvar a fonte no LIVE Studio quando o editor estiver acessível. Nenhum arquivo interno de configuração do TikTok foi sobrescrito.

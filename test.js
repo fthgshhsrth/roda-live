@@ -8,6 +8,7 @@ import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 import {captureProfile} from './public/capture-profile.js';
+import {waltzPose,floorWaltzPosition} from './public/waltz.js';
 const send=(s,id,name,coins,now=100,extra={})=>gift(s,{uniqueId:id,nickname:id,giftName:name,diamondCount:coins,...extra},now);
 test('rosa unitária entra; combo de dez rosas não vira noiva',()=>{
  const s=fresh();send(s,'Ana','Rose',1);send(s,'Ana','Rose',1,200,{repeatCount:10});
@@ -122,4 +123,26 @@ test('renderização prepara Full HD sem depender do DPI do monitor e limita buf
  assert.equal(captureProfile(1280,720).ratio,1.5);assert.equal(captureProfile(720,960,{preview:true}).ratio,1);
  const huge=captureProfile(4000,6000,{dpr:3});assert.ok(huge.ratio*6000<=4096);
  assert.equal(captureProfile(720,960,{high:false}).fps,30);
+});
+test('valsa usa compasso comum de três tempos e mantém parceiros próximos',()=>{
+ assert.ok(Math.abs(waltzPose(0).rise-waltzPose(2).rise)<1e-10);
+ assert.ok(waltzPose(1).rise>waltzPose(0).rise);
+ for(const t of [0,.5,1,2,10]){
+  const a=floorWaltzPosition(0,8,4.7,t),b=floorWaltzPosition(1,8,4.7,t);
+  assert.ok(Math.abs(Math.hypot(a.x-b.x,a.z-b.z)-1.16)<1e-10);
+  assert.ok(Math.abs(Math.abs(a.rotation-b.rotation)-Math.PI)<1e-10);
+ }
+});
+test('balões respeitam a lateral reservada ao catálogo',()=>{
+ const bounds={width:1080,minX:10,maxX:800,minY:100,maxY:1800};
+ const box=placeProjectedBubble({x:790,y:500},220,80,[],[],bounds);
+ assert.ok(box&&box.x+box.w<=800);assert.equal(placeProjectedBubble({x:100,y:500},900,80,[],[],bounds),null);
+});
+test('ícones são os arquivos TikTok de cada presente, sem confundir as rosas ou arraias',()=>{
+ const s=fresh(),cards=resolveGiftCatalog(s.settings.rules);
+ assert.ok(cards.every(g=>g.image.startsWith('/gifts/')));
+ assert.notEqual(cards.find(g=>g.effect==='join').image,cards.find(g=>g.effect==='bride').image);
+ assert.equal(cards.find(g=>g.effect==='reset').image,'/gifts/ray-serenade.webp');
+ assert.equal(send(s,'A','Ray Serenade',2999)?.effect,'reset');
+ s.settings.rules[2].names='Item customizado';assert.equal(resolveGiftCatalog(s.settings.rules)[2].image,'');
 });

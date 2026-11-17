@@ -1,4 +1,5 @@
-export const giftActions = {join:'Entrar na festa',marry:'Ser o noivo',bride:'Ser a noiva',band:'Entrar na banda',dj:'Ser DJ',reset:'Reiniciar a festa'};
+import {giftArtwork} from './gift-artwork.js';
+export const giftActions = {join:'Entrar',marry:'Ser o noivo',bride:'Ser a noiva',band:'Banda',dj:'Ser DJ',reset:'Reiniciar'};
 const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const aliases = value => String(value || '').split(',').map(normalize).filter(Boolean);
 export function sanitizeGifts(raw) {
@@ -17,9 +18,11 @@ export function resolveGiftCatalog(rules, gifts = [], status = 'offline') {
   const selected = priced.filter(g => ids.includes(g.id));
   const candidates = selected.length ? selected : priced.filter(g => names.includes(normalize(g.name)));
   const gift = status === 'ready' && candidates.length === 1 ? candidates[0] : null;
+  const art=giftArtwork[r.effect],stock=art&&r.coins===art.coins&&names.some(n=>art.aliases.some(a=>normalize(a)===n));
+  const knownArtwork=gift?art?.aliases.some(a=>normalize(a)===normalize(gift.name))&&stock:stock;
   return {effect:r.effect,action:giftActions[r.effect],icon:r.icon,
-   name:gift?.name || String(r.names || r.label).split(',')[0],coins:gift?.coins ?? r.coins,
-   id:gift?.id || '',image:gift?.image || '',status:gift?'verified':status==='ready'?(candidates.length?'ambiguous':'unavailable'):'pending'};
+   name:gift?.name || (stock?art.name:String(r.names || r.label).split(',')[0]),coins:gift?.coins ?? r.coins,
+   id:gift?.id || '',image:gift?.image || (knownArtwork?art.image:''),status:gift?'verified':status==='ready'?(candidates.length?'ambiguous':'unavailable'):'pending'};
  });
 }
 export function catalogRules(rules, cards) {
@@ -29,8 +32,9 @@ export function catalogRules(rules, cards) {
 export function renderGiftCatalog(container, cards) {
  container.replaceChildren(...cards.map(g => {
   const card = document.createElement('div');card.className = 'gift-item ' + g.status;card.dataset.effect = g.effect;
-  const icon = document.createElement('span');icon.className = 'gift-icon';icon.textContent = g.icon;
-  if (g.image) {const img = document.createElement('img');img.src = g.image;img.alt = '';img.referrerPolicy='no-referrer';img.onerror=()=>img.remove();icon.append(img);}
+  const icon = document.createElement('span');icon.className = 'gift-icon';
+  const missing=()=>{icon.replaceChildren(document.createTextNode('?'));icon.classList.add('missing');};
+  if (g.image) {const img = document.createElement('img');img.src = g.image;img.alt = g.name;img.referrerPolicy='no-referrer';img.onerror=missing;icon.append(img);}else missing();
   const info = document.createElement('div'),action = document.createElement('strong'),name = document.createElement('span'),price = document.createElement('small');
   action.textContent = g.action;name.textContent = g.name;
   const coins=g.coins+' '+(g.coins===1?'moeda':'moedas');

@@ -8,9 +8,9 @@
 <header class="live-header"><h1 id="sceneTitle">ARRAIÁ DAS BARATAS</h1><span class="scene-count"><strong id="count">0</strong> na festa</span><p id="sceneSubtitle" hidden></p></header>
 <div id="finale" hidden><strong>🎆 NOVA FESTA!</strong><span id="finaleName"></span><small>Todos os papéis estão livres de novo.</small></div>
 <div id="demoHint" hidden></div><div id="eventToast" aria-live="polite"></div>
-<footer class="live-footer"><div class="catalog-heading"><span>ESCOLHA SEU PAPEL</span><small id="catalogStatus">Prévia · confirme os presentes ao conectar</small></div>
+<aside class="live-footer gift-sidebar"><div class="catalog-heading"><span>PRESENTES</span><small id="catalogStatus">Prévia · confirme ao conectar</small></div>
 <div id="giftCatalog" class="gift-catalog" aria-label="Presentes e ações da festa"></div>
-<div id="nowTrack" hidden><span class="equalizer"><i></i><i></i><i></i></span><span id="trackLabel"></span></div></footer>
+<div id="nowTrack" hidden><span class="equalizer"><i></i><i></i><i></i></span><span id="trackLabel"></span></div></aside>
 <div id="windowTools"><button id="enable">♫ Ativar áudio</button><button id="fullscreen">⛶ Tela cheia</button><button id="quality">Qualidade: Full HD</button></div>
 <div id="offline" hidden>Reconectando ao painel…</div><div id="boot" role="status">Acendendo a pista 3D…</div><audio id="audio" preload="auto"></audio>
 <script>window.addEventListener('error',function(e){var b=document.getElementById('boot');b.hidden=false;b.textContent='Não foi possível abrir a cena 3D. Confira as dependências e a aceleração gráfica. '+(e.message||'');});</script>

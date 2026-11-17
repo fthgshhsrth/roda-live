@@ -39,7 +39,7 @@
     },
     {
       "file": "party.js",
-      "sha256": "a379c3a6b850dab8d938760edf7e8f5488baf4858da1415dc01275d70ccde3be",
+      "sha256": "bceb45fa94be300d61a9688d2b16debfe1215bc269aff1918e6714f3e17bde8d",
       "exports": [
         "rules",
         "defaults",
@@ -88,8 +88,16 @@
       "dependencies": []
     },
     {
+      "file": "public/gift-artwork.js",
+      "sha256": "33df0c6b046b47af8eb949673aada57882bc14ab839b7bbf29b6b556cc5fd129",
+      "exports": [
+        "giftArtwork"
+      ],
+      "dependencies": []
+    },
+    {
       "file": "public/gift-catalog.js",
-      "sha256": "c3d26284d015d05a77da7fce399c0263e881850e3a5b3ae8b96cbe15f3b4eb7b",
+      "sha256": "3abd800df8deae3a4dd0e6246db93169253e523affb144d2e7ac80e470c53002",
       "exports": [
         "giftActions",
         "sanitizeGifts",
@@ -97,7 +105,9 @@
         "catalogRules",
         "renderGiftCatalog"
       ],
-      "dependencies": []
+      "dependencies": [
+        "public/gift-artwork.js"
+      ]
     },
     {
       "file": "public/instruments.js",
@@ -111,7 +121,7 @@
     },
     {
       "file": "public/layout.js",
-      "sha256": "b1900e2f57d2a5ead0604a464c0637b1191bcd824b90a0265e55a462c31b32e6",
+      "sha256": "297e8244149c206362bf7e48ac5417703d047815ea520f310dd4e801a397a7b2",
       "exports": [
         "overlaps",
         "placeProjectedBubble"
@@ -147,19 +157,20 @@
     },
     {
       "file": "public/roach.js",
-      "sha256": "cd2cdca6b6bb6a368dc9e370a51b3c15117e1165c7da251a7afde0040288fb99",
+      "sha256": "12d48044573c76b368c00e591bd664319773f70bfd48463a44859f1fdd984e19",
       "exports": [
         "characterSeed",
         "makeRoach"
       ],
       "dependencies": [
         "three",
-        "public/instruments.js"
+        "public/instruments.js",
+        "public/waltz.js"
       ]
     },
     {
       "file": "public/scene3d.js",
-      "sha256": "7ccf68f635cc4281fbed5b429ae2848728f30f3b8c824d984b40ca7bf3404044",
+      "sha256": "d6b835c6d41e0dfa252caa5569fc88d3749bc83d457680bf4af34a96e3beda21",
       "exports": [],
       "dependencies": [
         "three",
@@ -169,8 +180,18 @@
         "public/party-layout.js",
         "public/backstage.js",
         "public/capture-profile.js",
-        "public/gift-catalog.js"
+        "public/gift-catalog.js",
+        "public/waltz.js"
       ]
+    },
+    {
+      "file": "public/waltz.js",
+      "sha256": "c992342e22e3e7faf29f48a0142853a1c6a620e35e69e5731cd73266d77f360d",
+      "exports": [
+        "waltzPose",
+        "floorWaltzPosition"
+      ],
+      "dependencies": []
     },
     {
       "file": "qa-camera.mjs",
@@ -182,7 +203,7 @@
     },
     {
       "file": "qa-party.mjs",
-      "sha256": "a692f0af7611f3c1798b5ce1e00f1167a7bb01282b78304f3a624190c1c08384",
+      "sha256": "289fc4e4ae5f8cb0e178b9b7cdb1b839825775b0b89a9a3b707edb2017a56a4f",
       "exports": [],
       "dependencies": [
         "node:child_process",
@@ -221,7 +242,7 @@
     },
     {
       "file": "server.js",
-      "sha256": "78e4b27fa35c67a07e6d69ad742e143418f5d06ffc02cb85ed60819a7680fab2",
+      "sha256": "f6e8c42a3fba208391a6aa79d2ab827ab0857ee24804a25460de7a400f6ebb0b",
       "exports": [],
       "dependencies": [
         "node:http",
@@ -238,7 +259,7 @@
     },
     {
       "file": "test.js",
-      "sha256": "e57100578e3a5471f69041822abbf49fb7cad95e35d6bb9dbbe109e4a5446ed9",
+      "sha256": "8b09f96b77edccf6a692b20d8ce934f10077639a53854272d3ae5a49ef856137",
       "exports": [],
       "dependencies": [
         "node:test",
@@ -250,7 +271,8 @@
         "media.js",
         "music.js",
         "public/gift-catalog.js",
-        "public/capture-profile.js"
+        "public/capture-profile.js",
+        "public/waltz.js"
       ]
     },
     {

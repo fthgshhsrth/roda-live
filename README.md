@@ -1,5 +1,5 @@
 # Arraiá das Baratas · Roda Live 3D 🪳
-Uma festa interativa para TikTok: baratas humanoides com roupas e acessórios, casal no centro, banda de cinco músicos e DJ. Todos os modelos, instrumentos e movimentos são gerados em Three.js/WebGL2, sem CDN.
+Uma festa interativa para TikTok: baratas com quitina em tons naturais, dois braços, duas pernas, antenas, asas com nervuras e roupas variadas, casal no centro, banda de cinco músicos e DJ. Todos os modelos, instrumentos e movimentos são gerados em Three.js/WebGL2, sem CDN.
 
 <img src="docs/preview-vertical.png" width="420" alt="Festa 3D com banda, casal, DJ e balões dos doadores">
 
@@ -30,7 +30,7 @@ Os valores da tabela são os configurados para esta festa, não uma garantia do 
 
 A câmera faz closes suaves, prioriza papéis recém-assumidos e participantes recentes, e volta ao noivo periodicamente. A visão geral enquadra roda, palco e DJ. Na entrada por rosa, o personagem acena para a câmera. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.
 
-Os músicos animam os instrumentos e o DJ opera o console. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
+A pista dança uma valsa em compasso 3/4, com relógio compartilhado, passos sincronizados e pares que giram juntos. O casal acompanha o mesmo compasso. Os músicos animam os instrumentos e o DJ opera o console, separados da valsa. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
 
 ## Executar
 Instale Node.js 22+:
@@ -49,7 +49,7 @@ No Windows, **INICIAR.bat** mantém o servidor no terminal. **ABRIR-LIVE.bat** i
 1. No painel, use **Copiar link vertical** ou **Copiar link horizontal**.
 2. No LIVE Studio, adicione uma fonte **Link / Navegador**, se disponível na sua versão, e cole o endereço.
 3. Defina a fonte em **1080 × 1920** para vertical ou **1920 × 1080** para horizontal. Ative o som apenas nesta fonte.
-4. O overlay usa antialiasing, sombras de alta resolução e buffer Full HD por padrão; mantém os seis presentes visíveis e mostra apenas o nome em destaque e até dois comentários.
+4. O overlay usa antialiasing, sombras de alta resolução e buffer Full HD por padrão; mantém os seis presentes em uma coluna compacta à direita, com imagens originais do TikTok e mostra apenas o nome em destaque e até dois comentários. As asas, antenas e os quatro membros são verificados no teste de navegador.
 
 Se sua versão não aceitar a fonte local, **ABRIR-LIVE.bat** abre a janela dedicada em 1080 × 1920 (o Windows pode limitar ao tamanho do monitor). Use Captura de janela → **BARATAS NA PISTA**. Aumentar o buffer 3D não aumenta a resolução de uma janela capturada pequena; prefira a fonte Link no tamanho de saída. Não use o iframe da prévia como fonte.
 

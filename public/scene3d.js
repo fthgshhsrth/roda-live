@@ -6,6 +6,7 @@ import {sceneCast} from './party-layout.js';
 import {addBackstage} from './backstage.js';
 import {captureProfile} from './capture-profile.js';
 import {renderGiftCatalog} from './gift-catalog.js';
+import {waltzPose,floorWaltzPosition} from './waltz.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
@@ -143,7 +144,7 @@ function reconcile(people) {
     let entry = characters.get(person.id);
     if (!entry) {
       const model = makeRoach(person); scene.add(model.root);
-      const name = document.createElement('div'); name.className = 'name-tag'; name.textContent = person.name; $('labels').append(name);
+      const name = document.createElement('div'); name.className = 'name-tag'; name.hidden=true;name.textContent = person.name; $('labels').append(name);
       const bubble = document.createElement('div'); bubble.className = 'comment-bubble'; bubble.hidden = true; $('labels').append(bubble);
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('stroke', '#ffdbbe99'); line.setAttribute('stroke-width', '1'); line.style.display = 'none'; $('connectors').append(line);
@@ -233,15 +234,15 @@ function moveCamera(time, dt, entries) {
 let projected = [], bubbleBoxes = [];
 function labelLayout(entries, now) {
   const w = innerWidth, h = innerHeight, obstacles = [], active = [],visibleEntries=[];
-  const footer=$('giftCatalog').getBoundingClientRect(),header=$('sceneTitle').getBoundingClientRect();
-  const bounds={width:w,minY:header.bottom+16,maxY:footer.top-30};
+  const header=$('sceneTitle').getBoundingClientRect();
+  const bounds={width:w,minX:viewport.left+10,maxX:viewport.right-10,minY:header.bottom+16,maxY:viewport.bottom-15};
   if(Date.now()<toastUntil){const r=$('eventToast').getBoundingClientRect();obstacles.push({x:r.x-4,y:r.y-4,w:r.width+8,h:r.height+8});}
   for (const entry of entries) {
     const root = entry.model.root, scale = root.scale.x;
     const head = project(root.position.x,root.position.y+3.5 * scale + entry.model.dancer.position.y, root.position.z);
     const feet = project(root.position.x,root.position.y,root.position.z);
     entry.bubble.hidden = true; entry.line.style.display = 'none';
-    const visible = head.visible && feet.visible && feet.x > -100 && feet.x < w + 100 && feet.y > 0 && head.y < h;
+    const visible = head.visible && feet.visible && feet.x > viewport.left && feet.x < viewport.right && feet.y > viewport.top && head.y < viewport.bottom;
     entry.name.hidden = true;
     if (!visible) continue;
     const left = project(root.position.x - 1.1 * scale,root.position.y+1.3, root.position.z);
@@ -287,17 +288,23 @@ function draw(time) {
     const radius = counts.length === 1 ? 4.7 : counts.length === 2 ? [5.9, 3.2][ring] : [6.2, 4.15, 2.1][ring];
     for (let i = 0; i < count; i++) {
       const entry = dancers[index++]; if (!entry) continue;
-      const angle = i / count * Math.PI * 2 + elapsed * .09 * (ring % 2 ? -1 : 1);
-      entry.model.root.position.set(Math.sin(angle) * radius, .03, Math.cos(angle) * radius);
+      const pose=floorWaltzPosition(i,count,radius,elapsed);
+      entry.model.root.position.set(pose.x,.03,pose.z);
       const baseScale = .83 + (entry.model.seed % 4) * .065;
       entry.model.root.scale.setScalar(baseScale * (n > 30 ? .68 : n > 12 ? .85 : 1));
       const greeting = shot.reason === 'rose' && shot.targetId === entry.person.id && !!shot.event?.entered;
       entry.model.animate(elapsed, entry.person, Date.now() + offset, beat, greeting);
+      if(!greeting)entry.model.root.rotation.y=pose.rotation;
     }
   });
   for(const entry of entries.filter(entry=>entry.person.stageResident)){
     entry.model.root.position.set(...entry.person.position);
-    entry.model.root.scale.setScalar(entry.person.stageRole==='band'?1:.95);entry.model.animate(elapsed*.8,entry.person,Date.now()+offset,beat);
+    entry.model.root.scale.setScalar(entry.person.stageRole==='band'?1:.95);entry.model.animate(elapsed,entry.person,Date.now()+offset,beat);
+    if(['bride','groom'].includes(entry.person.stageRole)){
+      const turn=waltzPose(elapsed).turn,side=entry.person.stageRole==='bride'?-1:1;
+      entry.model.root.position.set(side*.72*Math.cos(turn),.55,-side*.72*Math.sin(turn));
+      entry.model.root.rotation.y=turn-side*Math.PI/2;
+    }
   }
   moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;

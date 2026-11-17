@@ -6,7 +6,7 @@ export const rules=[
  {label:'Noiva · Rosa 10',icon:'👰',names:'Rosa,Rose,Rosa de 10,Rosa 10',ids:'',coins:10,effect:'bride'},
  {label:'Banda · Rosquinha',icon:'🍩',names:'Rosquinha,Doughnut,Donut,Doughnuts',ids:'',coins:30,effect:'band'},
  {label:'DJ · Boné',icon:'🧢',names:'Boné,Cap,Baseball Cap',ids:'',coins:99,effect:'dj'},
- {label:'Reiniciar · Serenata',icon:'🎆',names:'Serenata da Arraia,Serenata de arraia,Serenata de arraiá,Serenata de arraial,Arraia Serenade,Arraiá Serenade',ids:'',coins:2999,effect:'reset'}
+ {label:'Reiniciar · Serenata',icon:'🎆',names:'Serenata da Arraia,Ray Serenade,Serenata de arraia,Serenata de arraiá,Serenata de arraial,Arraia Serenade,Arraiá Serenade',ids:'',coins:2999,effect:'reset'}
 ];
 export const defaults={title:'A RODA É SUA',subtitle:'Mande uma rosa e entre na roda!',duration:15,speed:1,capacity:24,comments:true,transparent:false,rules};
 const emptyCouple=()=>({groomId:null,brideId:null,since:null});
@@ -102,6 +102,7 @@ export function upgradeState(s){
   if(r.effect==='reset'&&r.names.includes('Serenata de arraia')&&!r.names.includes('Serenata da Arraia'))return {...r,names:'Serenata da Arraia,'+r.names};
   return r;
  });
+ s.settings.rules=s.settings.rules.map(r=>r.effect==='reset'&&r.names.includes('Serenata da Arraia')&&!r.names.includes('Ray Serenade')?{...r,names:r.names+',Ray Serenade'}:r);
  for(const p of s.people)p.joinedAt??=p.lastGiftAt||0;
  s.schemaVersion=5;return s;
 }
