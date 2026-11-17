@@ -16,7 +16,7 @@ if errorlevel 1 (
  pause
  exit /b 1
 )
-if not exist "node_modules\tiktok-live-connector\package.json" (
+if not exist "node_modules\three\build\three.module.js" (
  call npm ci --no-audit --no-fund
  if errorlevel 1 (
   echo Nao foi possivel instalar o conector. Confira sua internet.

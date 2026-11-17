@@ -1,73 +1,99 @@
-# Roda Live 🌹
-Template de live interativa para TikTok, com painel local, personagens animados, presentes, comentários e biblioteca musical.
+# Baratas na Pista · Roda Live 3D 🪳
+Template local de live interativa para TikTok, com uma pista circular e baratas dançando em **3D real (Three.js / WebGL2)**.
 
-## Recursos
-- Uma rosa adiciona o participante à roda com seu nome; novas rosas renovam o tempo.
-- Reações configuráveis por nomes e IDs dos presentes: corações, pulo, brilho, estrelas e coroa.
-- Comentários acima da cabeça com posicionamento que evita cobrir personagens e outras bolhas.
-- Painel com simulador, participantes, configurações, histórico e prévia silenciosa.
-- Biblioteca com fila, play, pausa, volume e posição.
-- Downloader: YouTube → yt-dlp → FFmpeg → MP3 na pasta music/ → fila.
-- Cena vertical 1080 × 1920 para OBS e TikTok Live Studio, com opção de fundo transparente.
+<img src="docs/preview-vertical.png" width="400" alt="Pista 3D com baratas diferentes dançando e comentários acima dos personagens">
 
-## Requisitos
-- Node.js 22 ou superior.
-- yt-dlp, FFmpeg e ffprobe no PATH, ou seus executáveis na pasta tools/.
-- Uma conta ao vivo para receber eventos reais do TikTok.
-
-No Windows, INSTALAR-AUDIO.ps1 auxilia a instalação das ferramentas de áudio usando winget. Executáveis e músicas não são distribuídos neste repositório.
+## Versão 2
+- Pista 3D com iluminação, sombras, anéis luminosos e globo giratório.
+- Baratas com seis membros articulados, antenas, casco e olhos animados.
+- Características estáveis por participante: cores, tamanho, óculos, boné, fone, chapéu de festa, bigode e sapatos.
+- Passos de dança diferentes e reações a presentes.
+- A biblioteca foi substituída por um downloader: **link → yt-dlp → MP3 → reprodução automática na live**.
+- Janela sem barra de navegador, composição vertical/horizontal e modo leve.
 
 ## Executar
-Extraia o projeto, abra um terminal nessa pasta e execute:
+Instale Node.js 22+ e execute:
 
 ~~~sh
 npm ci
 npm start
 ~~~
 
-No Windows, também é possível executar INICIAR.bat.
+No Windows, INICIAR.bat inicia o servidor. Painel: http://localhost:3000
 
-Painel: http://localhost:3000
-Cena: http://localhost:3000/overlay.html
+Para abrir a cena em janela dedicada, execute **ABRIR-LIVE.bat** ou:
 
-No OBS ou TikTok Live Studio, adicione a cena como fonte de navegador com largura 1080 e altura 1920. Ative o áudio da fonte; se o navegador bloquear a reprodução automática, use Interagir e clique em Ativar áudio da cena. Mantenha somente uma cena emitindo áudio.
+~~~sh
+npm run live
+~~~
 
-## Testar sem uma live
-No Laboratório de eventos, escolha um nome, envie Rosa e depois um comentário ou outro presente. Os personagens e o painel se atualizam em tempo real.
+O iniciador abre Edge/Chrome em modo aplicativo, com áudio automático, e inicia o servidor se necessário. Não requer Git ou Python.
 
+## TikTok Live Studio: captura de janela
+1. Execute ABRIR-LIVE.bat.
+2. No TikTok Live Studio, adicione **Captura de janela**.
+3. Selecione **BARATAS NA PISTA**.
+4. Capture o áudio dessa janela ou a saída de áudio do computador.
+5. Ajuste o enquadramento da fonte.
+
+A cena se adapta a janelas verticais e horizontais. A prévia do painel é silenciosa. Mantenha apenas uma cena emitindo áudio.
+
+**F** alterna tela cheia. Os controles somem após dois segundos sem mover o mouse. **Qualidade: leve** desliga sombras e reduz a resolução. Ative a aceleração gráfica de Edge/Chrome.
+
+Alternativa: fonte de navegador em http://localhost:3000/overlay.html, com 1080 × 1920 ou 1920 × 1080. Transparência é indicada para fontes de navegador que a suportem; captura de janela usa o fundo da janela.
+
+## Presentes e comentários
+Digite o @ de uma conta ao vivo no painel. O conector é não oficial e depende do TikTok e do provedor de assinatura. Se exigida, defina EULER_API_KEY no ambiente antes de iniciar; arquivos .env não são lidos automaticamente.
+
+| Presente | Reação |
+| --- | --- |
+| Rosa | Entra com nome ou renova a permanência |
+| Coração | Corações flutuantes e aura rosa |
+| GG | Pulo |
+| Perfume | Brilho |
+| Galáxia | Brilho violeta e partículas |
+| Leão | Coroa |
+
+Nomes e IDs são editáveis. Combos são contabilizados no encerramento. Até 48 participantes em três anéis; somente rosas criam vagas.
+
+Comentários usam a projeção da cena 3D para aparecer acima da cabeça, evitando corpos, nomes e outras bolhas. Se não houver espaço, podem expirar sem aparecer durante seus 7 segundos de exibição. O Laboratório permite testar tudo antes de conectar a live.
+
+## Downloader e autoplay
+Instale **yt-dlp, FFmpeg e ffprobe** no PATH ou coloque os executáveis em tools/. INSTALAR-AUDIO.ps1 auxilia a instalação via winget no Windows.
+
+Cole um link e clique em **Baixar e tocar na live**. Aceita sites compatíveis com yt-dlp, incluindo YouTube, TikTok, Vimeo e links diretos HTTP/HTTPS. O suporte depende do site e das regras de acesso; vídeos privados ou protegidos não têm reprodução garantida.
+
+O MP3 concluído vai para music/ e **substitui a faixa atual**, iniciando o áudio na cena. Mantenha a janela aberta. Uma fonte de navegador comum pode exigir o clique inicial em Ativar áudio; ABRIR-LIVE.bat habilita reprodução automática.
+
+Há pausa, retomada, parar, volume, posição e cancelamento. Não há biblioteca nem fila no painel. Os MP3 ficam no disco; nenhum áudio acompanha o projeto.
+
+Um vídeo por vez, sem playlists ou streams ao vivo, com limite de 1 GB e uma hora. O processo recebe argumentos separados, sem shell. Use conteúdo autorizado para transmissão e mantenha yt-dlp atualizado.
+
+## Estrutura
+| Arquivo | Função |
+| --- | --- |
+| server.js | HTTP local, SSE e TikTok |
+| media.js | yt-dlp, conversão, progresso e cancelamento |
+| music.js | Controle e sincronização da faixa |
+| public/scene3d.js | Cena, pista, câmera e projeção |
+| public/roach.js | Modelos, diferenças e dança |
+| public/overlay.css | Composição adaptável |
+| launch-window.mjs | Janela dedicada |
+| wheel.js | Presentes e participantes |
+
+Three.js é servido da instalação npm local, sem CDN. Configurações e sessão ficam em data/state.json; MP3 em music/. Dados locais, ferramentas e credenciais são ignorados pelo Git. O servidor escuta em 127.0.0.1; PORT altera a porta padrão 3000.
+
+## Verificação
 ~~~sh
 npm test
 ~~~
 
-Os testes verificam rosas, renovação, combos, comentários, expiração, lotação e colisão das bolhas. O arquivo qa.mjs permite verificação no Edge instalado no Windows, com o servidor iniciado na porta 3000. Ele limpa os participantes simulados ao terminar; execute antes de uma sessão real.
+Os testes cobrem presentes, combos, permanência, comentários, URLs, autoplay e eventos antigos de áudio.
 
-## Conectar ao TikTok
-Digite o @ de uma conta ao vivo e clique em Conectar. Ajuste os nomes e IDs de presentes disponíveis na sua região no mapa de presentes.
+Com Edge instalado no Windows e o servidor iniciado, node qa.mjs verifica WebGL2, animação, variações, comentários, janelas vertical/horizontal, download direto, conversão e reprodução automática. Requer sessão vazia e desconectada do TikTok; limpa os participantes simulados ao terminar. Capturas e relatório ficam em verificacao/, fora do repositório.
 
-O conector é não oficial e depende da disponibilidade do TikTok e do provedor de assinatura. Se uma chave for exigida, defina EULER_API_KEY no ambiente antes de iniciar; o projeto não lê arquivos .env automaticamente. Não salve credenciais no código ou no repositório.
+A conexão com uma live real e a captura dentro do TikTok Live Studio exigem validação no computador de transmissão.
 
-## Música
-Cole uma URL HTTPS de vídeo do YouTube em Baixar MP3 e aguarde a conversão. O resultado aparece na biblioteca e na fila. Tocar inicia a primeira faixa quando nenhuma está selecionada. Também é possível copiar seus MP3 para music/ e clicar em Atualizar.
+Projeto reconstruído a partir do grafo de arquitetura fornecido, que não incluía o código original.
 
-Downloads individuais, sem playlists, limitados a 150 MB e 15 minutos. Use conteúdo autorizado para transmissão. Mantenha yt-dlp atualizado quando o YouTube mudar.
-
-## Estrutura
-| Caminho | Função |
-| --- | --- |
-| server.js | HTTP local, eventos SSE, TikTok e downloader |
-| wheel.js | Regras de presentes, participantes e comentários |
-| public/ | Painel, cena Canvas e posicionamento das bolhas |
-| music/ | MP3 locais, ignorados pelo Git |
-| data/ | Configurações e sessão, criadas ao executar e ignoradas pelo Git |
-| tools/ | Executáveis locais opcionais, ignorados pelo Git |
-
-O servidor escuta somente em 127.0.0.1. A variável PORT altera a porta padrão. Configurações e sessão ficam em data/state.json.
-
-Na lotação máxima, um comentário pode expirar sem aparecer se não houver espaço livre para sua bolha. A documentação detalhada e as verificações realizadas estão em [LEIA-ME.md](LEIA-ME.md).
-
-## Referências
-Projeto reconstruído a partir do grafo de arquitetura fornecido, que não incluía o código-fonte original.
-
-- [TikTok Live Connector](https://github.com/zerodytrash/TikTok-Live-Connector)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- [FFmpeg](https://ffmpeg.org/)
+[Three.js](https://threejs.org/) · [TikTok Live Connector](https://github.com/zerodytrash/TikTok-Live-Connector) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org/)
