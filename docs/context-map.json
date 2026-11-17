@@ -286,7 +286,7 @@
     },
     {
       "file": "source-link.js",
-      "sha256": "a0d21f84abc6a83a646ac9b9536cc76f5ac97623970c02e9003ec18ed9983d85",
+      "sha256": "a21e594b71a8a8db3e779c9c7bd6974bdb708315c318a369f22e2cffcce82113",
       "exports": [
         "overlaySnapshot",
         "createOverlayGateway",

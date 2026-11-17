@@ -91,11 +91,22 @@ export function createPublicSource({root,assetPort,getSnapshot,onMusic,onChange=
      child.on('close',()=>{clearTimeout(timeout);if(!ready)reject(Error('Não foi possível abrir o link HTTPS. Verifique a conexão com a internet.'));else if(worker===child){worker=null;gateway?.server.close();gateway=null;change({phase:'offline',url:null,message:'Link encerrado. Gere um novo link no painel.'});}});
     });
     gateway.setOrigin(origin);
+    change({message:'Aguardando ativação do endereço HTTPS…'});
+    const dnsDeadline=Date.now()+90000,hostname=new URL(origin).hostname;
+    while(Date.now()<dnsDeadline){
+     try{
+      const r=await fetch('https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(hostname)+'&type=A',
+       {headers:{Accept:'application/dns-json'},signal:AbortSignal.timeout(5000)});
+      const record=await r.json();if(record.Status===0&&record.Answer?.some(a=>a.type===1))break;
+     }catch{}
+     await new Promise(resolve=>setTimeout(resolve,2500));
+    }
     change({message:'Validando o endereço HTTPS…'});
     let reachable=false;
-    for(let i=0;i<12;i++){
+    const deadline=Date.now()+60000;
+    while(Date.now()<deadline){
      try{const r=await fetch(origin+'/health/'+token,{signal:AbortSignal.timeout(5000)});if(r.ok&&(await r.json()).ok){reachable=true;break;}}catch{}
-     await new Promise(resolve=>setTimeout(resolve,750));
+     await new Promise(resolve=>setTimeout(resolve,2500));
     }
     if(!reachable)throw Error('O endereço HTTPS não respondeu. Verifique a internet e gere outro link.');
     change({phase:'online',url:origin+'/overlay/'+token+'?jogo=festa&source=1&format=portrait',message:'Link HTTPS ativo. Válido enquanto o servidor estiver ligado.'});return status();
