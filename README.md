@@ -16,7 +16,7 @@ A câmera alterna entre a visão geral da roda e closes de personagens aleatóri
 
 Quem envia rosas ganha prioridade sobre um close aleatório. O foco acompanha a barata enquanto ela dança. Na entrada, a câmera aproxima, a barata levanta a mão e dá um **tchauzinho para a câmera**, junto do aviso **“Nome entrou na roda!”**. Outra rosa de quem já participa renova o tempo e mostra o aviso de rosas.
 
-Se várias pessoas enviarem rosas, os destaques seguem a ordem de chegada, com um zoomout para mostrar a roda entre eles. Combos repetidos da mesma pessoa não prendem a câmera indefinidamente. Ao abrir a cena, avisos antigos não são repetidos.
+Se várias pessoas enviarem rosas, os destaques priorizam os envios mais recentes, com um zoomout para mostrar a roda entre eles. Combos repetidos da mesma pessoa não prendem a câmera indefinidamente. Ao abrir a cena, avisos antigos não são repetidos.
 
 Para verificar somente essa função, com o servidor iniciado e a sessão vazia/desconectada, execute **node qa-camera.mjs**. O teste usa Edge e limpa os participantes simulados ao terminar.
 
@@ -51,6 +51,15 @@ A cena se adapta a janelas verticais e horizontais. A prévia do painel é silen
 
 Alternativa: fonte de navegador em http://localhost:3000/overlay.html, com 1080 × 1920 ou 1920 × 1080. Transparência é indicada para fontes de navegador que a suportem; captura de janela usa o fundo da janela.
 
+## Casamento no centro
+Há uma noiva fixa e um lugar de noivo no meio da roda. O presente **Anel / Ring** ocupa esse lugar, mesmo sem uma rosa anterior. Edite os nomes e IDs no mapa de presentes conforme sua região.
+
+O noivo permanece no centro até outra pessoa enviar o presente de casamento. O anterior volta para a roda com o tempo renovado se houver vaga; se a roda estiver cheia, ele sai da cena. A vaga central é adicional à capacidade da roda. O operador também pode remover o noivo ou limpar a sessão no painel.
+
+A câmera dá prioridade imediata ao novo noivo, enquadrando o casal. Nos outros closes, prioriza os participantes mais recentes e volta periodicamente ao noivo. Quem entra por rosa continua recebendo zoom, tchauzinho e aviso.
+
+Teste específico, com o servidor iniciado e a sessão vazia: **node qa-wedding.mjs**.
+
 ## Presentes e comentários
 Digite o @ de uma conta ao vivo no painel. O conector é não oficial e depende do TikTok e do provedor de assinatura. Se exigida, defina EULER_API_KEY no ambiente antes de iniciar; arquivos .env não são lidos automaticamente.
 
@@ -63,7 +72,7 @@ Digite o @ de uma conta ao vivo no painel. O conector é não oficial e depende 
 | Galáxia | Brilho violeta e partículas |
 | Leão | Coroa |
 
-Nomes e IDs são editáveis. Combos são contabilizados no encerramento. Até 48 participantes em três anéis; somente rosas criam vagas.
+Nomes e IDs são editáveis. Combos são contabilizados no encerramento. Até 48 participantes em três anéis; rosas criam vagas na roda, e o Anel disputa a vaga central.
 
 Comentários usam a projeção da cena 3D para aparecer acima da cabeça, evitando corpos, nomes e outras bolhas. Se não houver espaço, podem expirar sem aparecer durante seus 7 segundos de exibição. O Laboratório permite testar tudo antes de conectar a live.
 

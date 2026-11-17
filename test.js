@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fresh,gift,comment,prune,settings} from './wheel.js';
+import {fresh,gift,comment,prune,settings,upgradeState} from './wheel.js';
 import {placeProjectedBubble,overlaps} from './public/layout.js';
 import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
@@ -96,4 +96,38 @@ test('primeira rosa interrompe o close de demonstração sem esperar outro ciclo
  const camera=new CameraDirector(0,()=>0);camera.update(8000,['demo']);
  camera.rose({person:'ana',name:'Ana',entered:true},8100);
  const shot=camera.update(8100,['ana']);assert.equal(shot.targetId,'ana');assert.equal(shot.reason,'rose');
+});
+
+test('Anel cria noivo direto, protege permanência e substitui o anterior',()=>{
+ const s=fresh();gift(s,{uniqueId:'ana',giftName:'Anel'},100);
+ assert.equal(s.couple.groomId,'ana');assert.equal(s.people.length,1);
+ prune(s,10000000);assert.equal(s.people.length,1);
+ assert.equal(comment(s,{uniqueId:'ana',comment:'casei'},10000000),true);
+ gift(s,{uniqueId:'bia',giftName:'Ring'},10000001);
+ assert.equal(s.couple.groomId,'bia');assert.equal(s.people.length,2);
+ gift(s,{uniqueId:'bia',giftName:'Ring'},10000002);assert.equal(s.people.length,2);
+ prune(s,20000000);assert.deepEqual(s.people.map(p=>p.id),['bia']);
+});
+
+test('casamento funciona com a roda cheia sem crescimento ilimitado',()=>{
+ const s=fresh();s.settings.capacity=4;
+ for(let i=0;i<4;i++)gift(s,{uniqueId:String(i),giftName:'Rose'},100);
+ for(let i=0;i<20;i++){gift(s,{uniqueId:'noivo'+i,giftName:'Ring'},200+i);assert.equal(s.people.length,5);}
+ assert.equal(s.couple.groomId,'noivo19');
+});
+
+test('migração adiciona casamento sem apagar o mapa de presentes existente',()=>{
+ const s=fresh();delete s.schemaVersion;delete s.couple;s.settings.rules=s.settings.rules.filter(r=>r.effect!=='marry');s.settings.rules[0].ids='42';
+ upgradeState(s);upgradeState(s);assert.equal(s.settings.rules.filter(r=>r.effect==='marry').length,1);assert.equal(s.settings.rules[0].ids,'42');
+});
+
+test('noivo novo tem prioridade imediata e os presentes recentes passam na frente',()=>{
+ const d=new CameraDirector(0,()=>0),ids=['antigo','novo','noivo'];
+ d.rose({person:'antigo'},1);d.rose({person:'novo'},2);
+ assert.equal(d.update(2,ids).targetId,'novo');
+ d.marry({person:'noivo',name:'Noivo'},3);
+ const shot=d.update(3,ids,{groomId:'noivo',recentIds:['novo','antigo']});assert.equal(shot.reason,'marry');assert.equal(shot.targetId,'noivo');
+ const background=new CameraDirector(0,()=>0);const context={groomId:'noivo',recentIds:['novo','antigo']};
+ assert.equal(background.update(8000,ids,context).targetId,'noivo');
+ background.update(13000,ids,context);assert.equal(background.update(21000,ids,context).targetId,'novo');
 });

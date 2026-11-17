@@ -5,10 +5,11 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {startDownload, executable as toolPath} from './media.js';
 import {activate, control} from './music.js';
-import {fresh,defaults,gift,comment,prune,settings} from './wheel.js';
+import {fresh,defaults,gift,comment,prune,settings,upgradeState} from './wheel.js';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
-const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.music.playing=false;}catch{}
+const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.schemaVersion=saved.schemaVersion||0;state.music.playing=false;}catch{}
+upgradeState(state);
 let audioReady=false, activeDownload=null;
 state.music.queue=[];state.music.revision=state.music.revision||0;state.music.duration=state.music.duration||0;
 const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'Modo local · simulador disponível'},jobs=[];
@@ -57,8 +58,8 @@ const server=http.createServer(async(req,res)=>{
  case '/api/disconnect':disconnect();break;
  case '/api/simulate':if(b.kind==='comment')comment(state,{uniqueId:b.user,nickname:b.user,comment:b.comment});else gift(state,{uniqueId:b.user,nickname:b.user,giftName:b.giftName,giftId:b.giftId,repeatCount:b.count,repeatEnd:true});break;
  case '/api/settings':state.settings=settings(b,state.settings);break;
- case '/api/remove':state.people=state.people.filter(p=>p.id!==b.id);break;
- case '/api/clear':state.people=[];state.log=[];state.roses=0;break;
+ case '/api/remove':state.people=state.people.filter(p=>p.id!==b.id);if(state.couple.groomId===b.id)state.couple={groomId:null,since:null};break;
+ case '/api/clear':state.people=[];state.log=[];state.roses=0;state.couple={groomId:null,since:null};break;
  case '/api/download':download(String(b.url||''));break;
  case '/api/download/cancel':activeDownload?.cancel();break;
  case '/api/music':control(state.music,b);break;

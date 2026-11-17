@@ -141,7 +141,8 @@ function reconcile(people) {
       line.setAttribute('stroke', '#ffdbbe99'); line.setAttribute('stroke-width', '1'); line.style.display = 'none'; $('connectors').append(line);
       entry = {model, name, bubble, line, person}; characters.set(person.id, entry);
     }
-    entry.person = person; entry.name.textContent = person.name;
+    entry.person = person; entry.name.textContent = person.weddingRole==='groom'?'💍 '+person.name:person.name;
+    entry.model.setWeddingRole(person.weddingRole||null);
   }
   renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
 }
@@ -163,13 +164,19 @@ function updateState(next) {
   $('demoHint').hidden = next.people.length > 0;
   $('nowTrack').hidden = !next.music.playing || !next.track;
   $('trackLabel').textContent = next.track?.title || '';
-  reconcile(next.people.length ? next.people : demo); void synchronizeAudio();
+  const groom=next.people.find(person=>person.id===next.couple?.groomId);
+  const dancers=next.people.length?next.people.filter(person=>person.id!==groom?.id):demo;
+  reconcile([...dancers,
+    {id:'@couple:bride',name:'Noiva da pista',weddingRole:'bride',stageResident:true},
+    {...(groom||{id:'@couple:groom',name:'Mande um Anel'}),weddingRole:'groom',stageResident:true}]);
+  void synchronizeAudio();
   // The first snapshot is a baseline; opening/reconnecting the scene never replays old entries.
   for (const event of [...next.log].reverse()) {
     if (seenEvents.has(event.id)) continue;
     seenEvents.add(event.id);
     if (!receivedSnapshot || next.serverTime - event.at > 15000) continue;
-    if (event.effect === 'join') director.rose(event, performance.now());
+    if (event.effect === 'marry') director.marry(event, performance.now());
+    else if (event.effect === 'join') director.rose(event, performance.now());
     else if (Date.now() >= toastProtectedUntil) showEventToast(event.icon + ' ' + event.message);
   }
   receivedSnapshot = true;
@@ -181,7 +188,9 @@ function project(x, y, z) {
   return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2, visible: v.z >= -1 && v.z <= 1};
 }
 function moveCamera(time, dt, entries) {
-  shot = director.update(time, entries.map(entry => entry.person.id));
+  const selectable=entries.filter(entry=>!entry.person.stageResident||entry.person.id===state.couple?.groomId);
+  const recentIds=[...selectable].sort((a,b)=>(b.person.joinedAt||0)-(a.person.joinedAt||0)).map(entry=>entry.person.id);
+  shot = director.update(time, selectable.map(entry => entry.person.id),{groomId:state.couple?.groomId,recentIds});
   desiredCamera.copy(overviewPosition); desiredAim.copy(overviewAim);
   const featured = characters.get(shot.targetId);
   if (shot.mode === 'focus' && featured) {
@@ -189,6 +198,9 @@ function moveCamera(time, dt, entries) {
     desiredAim.set(root.position.x, 1.4 * scale + featured.model.dancer.position.y * .3, root.position.z);
     const distance = Math.max(5.6, 4.2 / camera.aspect) * Math.max(.85, scale);
     desiredCamera.copy(desiredAim).add(new THREE.Vector3(.65, 2.1 * scale, distance));
+    if(shot.reason==='marry'||shot.reason==='groom'){
+      desiredAim.set(0,1.7,.1);desiredCamera.set(.2,4.1,Math.max(7.2,5/camera.aspect));
+    }
   }
   const blend = 1 - Math.exp(-dt * 3.2);
   camera.position.lerp(desiredCamera, blend); cameraAim.lerp(desiredAim, blend); camera.lookAt(cameraAim);
@@ -196,6 +208,7 @@ function moveCamera(time, dt, entries) {
     shownShot = shot.token;
     for (const entry of entries) entry.name.classList.toggle('camera-focus', entry.person.id === shot.targetId);
     if (shot.mode === 'focus' && shot.reason === 'rose') showEventToast(roseNotice(shot.event), true);
+    if (shot.mode === 'focus' && shot.reason === 'marry') showEventToast('💍 '+shot.event.name+' se casou! É o novo noivo!',true);
   }
 }
 let projected = [], bubbleBoxes = [];
@@ -244,13 +257,13 @@ function draw(time) {
   elapsed += dt * (state.settings.speed ?? 1); frame++;
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;
   if (analyser && !audio.paused) { analyser.getByteFrequencyData(frequency); beat = frequency.slice(0, 10).reduce((a, b) => a + b, 0) / 2550; }
-  const entries = [...characters.values()], n = entries.length;
+  const entries = [...characters.values()], dancers=entries.filter(entry=>!entry.person.stageResident),n=dancers.length;
   const counts = n <= 12 ? [n] : n <= 30 ? [Math.ceil(n * .6), Math.floor(n * .4)] : [18, Math.min(18, n - 18), Math.max(0, n - 36)];
   let index = 0;
   counts.forEach((count, ring) => {
     const radius = counts.length === 1 ? 4.7 : counts.length === 2 ? [5.9, 3.2][ring] : [6.2, 4.15, 2.1][ring];
     for (let i = 0; i < count; i++) {
-      const entry = entries[index++]; if (!entry) continue;
+      const entry = dancers[index++]; if (!entry) continue;
       const angle = i / count * Math.PI * 2 + elapsed * .09 * (ring % 2 ? -1 : 1);
       entry.model.root.position.set(Math.sin(angle) * radius, .03, Math.cos(angle) * radius);
       const baseScale = .83 + (entry.model.seed % 4) * .065;
@@ -259,6 +272,10 @@ function draw(time) {
       entry.model.animate(elapsed, entry.person, Date.now() + offset, beat, greeting);
     }
   });
+  for(const entry of entries.filter(entry=>entry.person.stageResident)){
+    entry.model.root.position.set(entry.person.weddingRole==='bride'?-.72:.72,.55,0);
+    entry.model.root.scale.setScalar(.95);entry.model.animate(elapsed*.75,entry.person,Date.now()+offset,beat);
+  }
   moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;
   particles.material.color.set(state.log[0]?.effect === 'galaxy' && Date.now() + offset - state.log[0].at < 6500 ? '#bf95ff' : '#efb5d6');

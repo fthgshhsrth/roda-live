@@ -111,7 +111,33 @@ export function makeRoach(person) {
   const aura = new THREE.Mesh(auraGeometry, auraMaterial); aura.rotation.x = -Math.PI / 2; aura.position.y = .04; root.add(aura); aura.visible = false;
   const hearts = Array.from({length: 3}, () => {const sprite = new THREE.Sprite(heartMaterial);sprite.visible = false;sprite.scale.setScalar(.33);dancer.add(sprite);return sprite;});
   const scale = .83 + (seed % 4) * .065; root.scale.setScalar(scale);
+  const originalColor=material.color.clone(),weddingCostumes=new Map();let weddingRole=null,weddingOutfit=null;
+  function setWeddingRole(role){
+    if(role===weddingRole)return;
+    weddingRole=role;hat.visible=!role;material.color.copy(originalColor);
+    if(weddingOutfit){weddingOutfit.visible=false;weddingOutfit=null;}
+    if(!role)return;
+    material.color.set(role==='bride'?'#f9e7c5':'#211a2e');
+    if(weddingCostumes.has(role)){weddingOutfit=weddingCostumes.get(role);weddingOutfit.visible=true;return;}
+    weddingOutfit=new THREE.Group();dancer.add(weddingOutfit);
+    weddingCostumes.set(role,weddingOutfit);
+    const fabric=new THREE.MeshStandardMaterial({color:role==='bride'?'#fff3df':'#191629',roughness:.7});ownMaterials.push(fabric);
+    material.color.set(role==='bride'?'#f9e7c5':'#211a2e');
+    if(role==='bride'){
+      const skirtGeometry=new THREE.ConeGeometry(.69,1.2,24);ownGeometry.push(skirtGeometry);
+      const skirt=new THREE.Mesh(skirtGeometry,fabric);skirt.position.y=.65;skirt.castShadow=true;weddingOutfit.add(skirt);
+      const veilMaterial=new THREE.MeshStandardMaterial({color:'#fff9f3',transparent:true,opacity:.55,side:THREE.DoubleSide,roughness:1});ownMaterials.push(veilMaterial);
+      const veilGeometry=new THREE.PlaneGeometry(1,1.4);ownGeometry.push(veilGeometry);
+      const veil=new THREE.Mesh(veilGeometry,veilMaterial);veil.position.set(0,1.65,-.3);weddingOutfit.add(veil);
+      for(let i=-1;i<=1;i++)ball(weddingOutfit,white,[i*.16,2.21,.08],[.12,.08,.1]);
+    }else{
+      ball(weddingOutfit,white,[0,1.22,.43],[.21,.48,.045]);
+      for(const side of [-1,1])ball(weddingOutfit,accent,[side*.12,1.61,.49],[.14,.085,.05]);
+      for(let i=0;i<3;i++)ball(weddingOutfit,black,[0,1.35-i*.16,.49],[.025,.025,.02]);
+    }
+  }
   return {root, dancer, seed, variant, material,
+    setWeddingRole,get weddingRole(){return weddingRole;},
     get isGreeting() { return greetingActive; },
     get greetingArm() { return limbs.find(limb => limb.row === 0 && limb.side === 1).pivot; },
     animate(t, person, now, beat = 0, greeting = false) {
@@ -137,7 +163,7 @@ export function makeRoach(person) {
       }
       antennae.forEach((a, i) => { a.rotation.z = Math.sin(phase * .7 + i) * .16; });
       crown.visible = effect === 'king';
-      hearts.forEach((heart, i) => {heart.visible = effect === 'heart';heart.position.set(Math.sin(t * 2 + i * 2) * .7, 2.5 + (t * .5 + i * .3) % .9, .35);});
+      hearts.forEach((heart, i) => {heart.visible = effect === 'heart'||!!weddingRole;heart.position.set(Math.sin(t * 2 + i * 2) * .7, 2.5 + (t * .5 + i * .3) % .9, .35);});
       aura.visible = effect !== '';
       aura.material.color.set(effect === 'heart' ? '#ff75c5' : effect === 'galaxy' ? '#a799ff' : '#c5ff8c');
       aura.scale.setScalar(1 + Math.sin(t * 5) * .09);
