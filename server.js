@@ -5,8 +5,8 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {startDownload, executable as toolPath} from './media.js';
 import {activate, control} from './music.js';
-import {fresh,defaults,gift,comment,prune,settings,upgradeState} from './wheel.js';
-const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=path.join(ROOT,'data');
+import {fresh,defaults,gift,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
+const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=process.env.RODA_DATA_DIR?path.resolve(process.env.RODA_DATA_DIR):path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
 const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.schemaVersion=saved.schemaVersion||0;state.music.playing=false;}catch{}
 upgradeState(state);
@@ -26,7 +26,7 @@ async function connect(username){
  const mod=await import('tiktok-live-connector');if(ticket!==epoch)return;
  const Connection=mod.TikTokLiveConnection||mod.WebcastPushConnection;
  const conn=new Connection(username,{enableExtendedGiftInfo:true,processInitialData:false,...(process.env.EULER_API_KEY?{signApiKey:process.env.EULER_API_KEY}:{})});live=conn;
- conn.on('gift',e=>{if(ticket!==epoch)return;const ev=gift(state,{...e,giftName:e.giftName||e.giftDetails?.giftName||e.gift?.name});if(ev){save();send();}});
+ conn.on('gift',e=>{if(ticket!==epoch)return;const ev=gift(state,{...e,giftName:e.giftName||e.giftDetails?.giftName||e.gift?.name});if(ev){if(ev.effect==='reset')activeDownload?.cancel();save();send();}});
  conn.on('chat',e=>{if(ticket===epoch&&comment(state,e))send();});
  conn.on('error',()=>{if(ticket===epoch)setStatus('error','Erro de conexão. Verifique a live e o provedor de assinatura.');});
  conn.on('disconnected',()=>{if(ticket===epoch)setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');});
@@ -37,9 +37,10 @@ async function connect(username){
 function tool(name){return toolPath(ROOT,name);}
 function download(raw){
  if(activeDownload?.job.phase==='running')throw Error('Aguarde ou cancele o download atual.');
+ const epoch=state.partyEpoch;
  activeDownload=startDownload(raw,{root:ROOT,musicDir:MUSIC,
  onUpdate:()=>send(),
- onComplete:file=>{activate(state.music,file);save();}});
+ onComplete:file=>{if(epoch!==state.partyEpoch)return;activate(state.music,file);save();}});
  jobs.unshift(activeDownload.job);jobs=jobs.slice(0,8);send();
 }
 async function body(req){let text='';for await(const chunk of req){text+=chunk;if(text.length>65536)throw Error('Requisição muito grande');}return text?JSON.parse(text):{};}
@@ -56,10 +57,10 @@ const server=http.createServer(async(req,res)=>{
  switch(url.pathname){
  case '/api/connect':{const u=String(b.username||'').replace(/^@/,'');if(!/^[\w.]{2,40}$/.test(u))throw Error('Informe o @ da live');void connect(u);break;}
  case '/api/disconnect':disconnect();break;
- case '/api/simulate':if(b.kind==='comment')comment(state,{uniqueId:b.user,nickname:b.user,comment:b.comment});else gift(state,{uniqueId:b.user,nickname:b.user,giftName:b.giftName,giftId:b.giftId,repeatCount:b.count,repeatEnd:true});break;
+ case '/api/simulate':if(b.kind==='comment')comment(state,{uniqueId:b.user,nickname:b.user,comment:b.comment});else {const ev=gift(state,{uniqueId:b.user,nickname:b.user,giftName:b.giftName,giftId:b.giftId,diamondCount:b.coins,repeatCount:b.count,repeatEnd:true});if(ev?.effect==='reset')activeDownload?.cancel();}break;
  case '/api/settings':state.settings=settings(b,state.settings);break;
- case '/api/remove':state.people=state.people.filter(p=>p.id!==b.id);if(state.couple.groomId===b.id)state.couple={groomId:null,since:null};break;
- case '/api/clear':state.people=[];state.log=[];state.roses=0;state.couple={groomId:null,since:null};break;
+ case '/api/remove':removePerson(state,b.id);break;
+ case '/api/clear':clearParty(state);activeDownload?.cancel();break;
  case '/api/download':download(String(b.url||''));break;
  case '/api/download/cancel':activeDownload?.cancel();break;
  case '/api/music':control(state.music,b);break;
@@ -67,6 +68,11 @@ const server=http.createServer(async(req,res)=>{
  }save();send();json(res,200,{ok:true});return;}
  if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Método inválido'});return;}
  if(url.pathname==='/api/state'){json(res,200,snapshot());return;}
+ if(url.pathname==='/api/gifts'){
+  if(!live)throw Error('Conecte uma live para carregar os presentes disponíveis.');
+  const catalog=await live.fetchAvailableGifts();
+  json(res,200,{gifts:catalog.map(g=>({id:String(g.id),name:g.name,coins:Number(g.diamond_count??g.diamondCount)}))});return;
+ }
  if(url.pathname==='/events'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});res.write('data: '+JSON.stringify(snapshot())+'\n\n');clients.add(res);req.on('close',()=>clients.delete(res));return;}
  if(['/vendor/three/three.module.js','/vendor/three/three.core.js'].includes(url.pathname)){
  const vendor=path.join(ROOT,'node_modules','three','build',path.basename(url.pathname));

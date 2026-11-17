@@ -1,4 +1,4 @@
-export const CAMERA_TIMING = Object.freeze({overview: 8000, random: 4500, rose: 5000, marry: 6000, groom: 5000, return: 2500, maxRose: 8000});
+export const CAMERA_TIMING = Object.freeze({overview: 8000, random: 4500, rose: 5000, marry: 6000, role:5500, groom: 5000, return: 3500, maxRose: 8000});
 
 // Scheduling is independent of animation speed and contains no Three.js objects.
 export class CameraDirector {
@@ -12,7 +12,7 @@ export class CameraDirector {
 
   rose(event, now) {
     if (!event.person) return;
-    if (event.priority !== 'marry' && this.mode === 'focus' && this.reason === 'rose' && this.targetId === event.person) {
+    if (!event.priority && this.mode === 'focus' && this.reason === 'rose' && this.targetId === event.person) {
       this.until = Math.min(this.startedAt + CAMERA_TIMING.maxRose, now + CAMERA_TIMING.rose);
       return;
     }
@@ -22,6 +22,7 @@ export class CameraDirector {
   }
 
   marry(event, now) {this.queue=this.queue.filter(item=>item.priority!=='marry');this.rose({...event,priority:'marry'},now);}
+  feature(event,now){if(event.effect==='marry'){this.marry(event,now);return;}this.queue=this.queue.filter(item=>!(item.priority==='role'&&item.effect===event.effect&&item.slot===event.slot));this.rose({...event,priority:'role'},now);}
 
   overview(now) {
     this.mode = 'overview'; this.reason = null; this.targetId = null; this.event = null;
@@ -33,6 +34,7 @@ export class CameraDirector {
     this.mode = 'focus'; this.reason = reason; this.targetId = id; this.event = event;
     this.startedAt = now; this.until = now + CAMERA_TIMING[reason]; this.token++;
     if (reason === 'random') this.lastRandomId = id;
+    this.activeOrder=event?.order||0;
   }
 
   update(now, ids, context = {}) {
@@ -40,9 +42,13 @@ export class CameraDirector {
     const groom=context.groomId||null;
     if(this.groomId!==groom){this.groomId=groom;this.groomDueAt=now+16000;}
     this.queue = this.queue.filter(event => available.has(event.person) && (event.priority!=='marry'||event.person===this.groomId));
-    this.queue.sort((a,b)=>(b.priority==='marry')-(a.priority==='marry')||b.order-a.order);
-    if(this.queue[0]?.priority==='marry'){
-      const event=this.queue.shift();this.focus(event.person,'marry',event,now);this.groomDueAt=now+20000;this.lastFeaturedWasGroom=true;
+    this.queue=this.queue.filter(event=>event.priority!=='role'||!context.roles||context.roles[event.person]===event.effect);
+    const rank=event=>event.priority==='marry'?3:event.priority==='role'?2:1;
+    this.queue.sort((a,b)=>rank(b)-rank(a)||b.order-a.order);
+    if(['marry','role'].includes(this.queue[0]?.priority)&&
+       (this.mode==='overview'&&now>=this.overviewUntil||this.mode==='focus'&&
+        (this.queue[0].order>(this.activeOrder||0)||this.queue[0].priority==='marry'&&this.reason!=='marry'))){
+      const event=this.queue.shift();this.focus(event.person,event.priority==='marry'?'marry':'role',event,now);this.groomDueAt=now+20000;this.lastFeaturedWasGroom=event.person===this.groomId;
     }
     if (this.mode === 'focus' && (!available.has(this.targetId) || now >= this.until ||
         (['marry','groom'].includes(this.reason)&&this.targetId!==this.groomId))) {

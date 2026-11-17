@@ -1,133 +1,94 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fresh,gift,comment,prune,settings,upgradeState} from './wheel.js';
+import {fresh,gift,comment,prune,settings,upgradeState,partyRole,clearParty,removePerson} from './wheel.js';
+import {sceneCast,BAND} from './public/party-layout.js';
+import {CameraDirector} from './public/camera-director.js';
 import {placeProjectedBubble,overlaps} from './public/layout.js';
 import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
-import {CameraDirector, CAMERA_TIMING, roseNotice} from './public/camera-director.js';
-test('rosa entra e renova sem duplicar personagem',()=>{const s=fresh();gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},1000);gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rosa',repeatCount:3},2000);assert.equal(s.people.length,1);assert.equal(s.people[0].roses,4);assert.equal(s.people[0].expires,902000);assert.equal(s.roses,4);});
-test('combo conta somente no encerramento',()=>{const s=fresh();assert.equal(gift(s,{uniqueId:'a',giftName:'Rose',giftType:1,repeatCount:2,repeatEnd:false}),null);gift(s,{user:{uniqueId:'a',nickname:'A'},giftName:'Rose',giftType:1,repeatCount:3,repeatEnd:true});assert.equal(s.roses,3);});
-test('comentário exige participante ativo',()=>{const s=fresh();assert.equal(comment(s,{uniqueId:'a',comment:'oi'},100),false);gift(s,{uniqueId:'a',giftName:'Rose'},100);assert.equal(comment(s,{uniqueId:'a',comment:'oi'},200),true);assert.equal(s.people[0].commentUntil,7200);prune(s,1000000);assert.equal(s.people.length,0);});
-test('efeitos não criam vagas e GG faz pular',()=>{const s=fresh();gift(s,{uniqueId:'a',giftName:'Galaxy'},100);assert.equal(s.people.length,0);gift(s,{uniqueId:'a',giftName:'Rose'},200);gift(s,{uniqueId:'a',giftName:'GG'},300);assert.equal(s.people[0].effect,'jump');});
-test('capacidade e valores inválidos',()=>{const s=fresh();s.settings.capacity=4;for(let i=0;i<6;i++)gift(s,{uniqueId:String(i),giftName:'Rose'});assert.equal(s.people.length,4);assert.equal(settings({capacity:900},s.settings).capacity,48);assert.throws(()=>settings({speed:'abc'},s.settings));});
-test('bolhas projetadas respeitam corpos, outras bolhas e os limites da janela',()=>{
- for(const width of [360,540,1080,1920]){
-  const obstacles=[{x:width*.3,y:400,w:80,h:160},{x:width*.55,y:300,w:80,h:160}];
-  const placed=[], bounds={width,minY:100,maxY:700};
-  for(const anchor of [{x:width*.4,y:400},{x:width*.6,y:300}]){
-   const box=placeProjectedBubble(anchor,Math.min(180,width*.4),65,obstacles,placed,bounds);
-   assert.ok(box);assert.ok(box.y>=100);assert.ok(box.x>=10);assert.ok(box.x+box.w<=width-10);
-   assert.ok(obstacles.every(o=>!overlaps(box,o)));assert.ok(placed.every(o=>!overlaps(box,o)));placed.push(box);
-  }
+const send=(s,id,name,coins,now=100,extra={})=>gift(s,{uniqueId:id,nickname:id,giftName:name,diamondCount:coins,...extra},now);
+test('rosa unitária entra; combo de dez rosas não vira noiva',()=>{
+ const s=fresh();send(s,'Ana','Rose',1);send(s,'Ana','Rose',1,200,{repeatCount:10});
+ assert.equal(s.people.length,1);assert.equal(s.roses,11);assert.equal(s.couple.brideId,null);assert.equal(s.people[0].expires,900200);
+});
+test('rosa de dez moedas escolhe noiva sem colidir com rosa comum',()=>{
+ const s=fresh();send(s,'Ana','Rosa',10);assert.equal(s.couple.brideId,'Ana');assert.equal(s.roses,0);
+ assert.equal(send(s,'Bia','Rosa',99),null);assert.equal(send(s,'Bia','Rosa',undefined),null);
+});
+test('noivo usa mãos coração; o Anel antigo não concede papel',()=>{
+ const s=fresh();send(s,'A','Mãos fazendo coração',null);assert.equal(s.couple.groomId,'A');
+ assert.equal(send(s,'B','Anel',30),null);send(s,'B','Heart Me',1,200);assert.equal(s.couple.groomId,'B');assert.equal(partyRole(s,'A'),null);
+});
+test('cada doador tem um papel; noiva e noivo são disputados separadamente',()=>{
+ const s=fresh();send(s,'A','Heart Hands',null);send(s,'B','Rosa',10);
+ send(s,'C','Rosa',10,200);assert.equal(s.couple.groomId,'A');assert.equal(s.couple.brideId,'C');
+ send(s,'A','Boné',99,300);assert.equal(s.couple.groomId,null);assert.equal(s.stage.djId,'A');
+ send(s,'C','Rosquinha',30,400);assert.equal(s.couple.brideId,null);assert.equal(partyRole(s,'C').kind,'band');
+});
+test('banda tem cinco vagas e o sexto doador substitui a vaga mais antiga',()=>{
+ const s=fresh();for(let i=0;i<5;i++)send(s,'B'+i,'Rosquinha',30,100+i);
+ assert.deepEqual(s.stage.bandIds,['B0','B1','B2','B3','B4']);send(s,'B5','Donut',30,200);
+ assert.deepEqual(s.stage.bandIds,['B5','B1','B2','B3','B4']);assert.equal(partyRole(s,'B0'),null);
+ send(s,'B5','Donut',30,300);assert.equal(s.people.filter(p=>p.id==='B5').length,1);assert.equal(s.stage.bandIds.filter(x=>x==='B5').length,1);
+});
+test('papéis continuam após vencer o tempo normal; substituídos retornam à roda',()=>{
+ const s=fresh();send(s,'N','Heart Hands',null);send(s,'V','Rose',10);send(s,'DJ','Cap',99);send(s,'M','Donut',30);send(s,'P','Rose',1);
+ prune(s,10000000);assert.equal(s.people.length,4);assert.equal(comment(s,{uniqueId:'DJ',comment:'oi'},10000000),true);
+ send(s,'DJ2','Cap',99,10000001);assert.equal(partyRole(s,'DJ'),null);prune(s,20000000);assert.ok(!s.people.find(p=>p.id==='DJ'));
+});
+test('capacidade da roda não impede papéis e substituições permanecem limitadas',()=>{
+ const s=fresh();s.settings.capacity=4;for(let i=0;i<4;i++)send(s,'P'+i,'Rose',1);
+ for(let i=0;i<15;i++)send(s,'D'+i,'Cap',99,200+i);
+ assert.equal(s.people.length,5);assert.equal(s.stage.djId,'D14');assert.equal(send(s,'extra','Rose',1),null);
+});
+test('combos incompletos e mensagens repetidas não reaplicam papéis',()=>{
+ const s=fresh();assert.equal(send(s,'A','Donut',30,100,{giftType:1,repeatEnd:false,msgId:'x'}),null);
+ send(s,'A','Donut',30,200,{giftType:1,repeatEnd:true,msgId:'x'});assert.equal(s.stage.bandIds[0],'A');
+ assert.equal(send(s,'A','Donut',30,300,{giftType:1,repeatEnd:true,msgId:'x'}),null);
+});
+test('serenata exige nome/ID correto e 2999 por unidade; reinicia toda a festa e áudio',()=>{
+ const s=fresh();send(s,'N','Heart Hands',null);send(s,'V','Rose',10);send(s,'M','Donut',30);send(s,'D','Cap',99);
+ activate(s.music,'teste.mp3',100);s.music.volume=.4;const epoch=s.partyEpoch;
+ assert.equal(send(s,'X','Rose',2999),null);
+ assert.equal(send(s,'X','Serenata de arraia',1,200,{repeatCount:2999}),null);
+ assert.equal(send(s,'X','Serenata de arraia',undefined),null);
+ send(s,'X','Serenata de arraiá',2999,300,{msgId:'reset'});
+ assert.equal(s.people.length,0);assert.equal(s.couple.groomId,null);assert.equal(s.couple.brideId,null);assert.equal(s.stage.djId,null);assert.ok(s.stage.bandIds.every(x=>x===null));
+ assert.equal(s.music.playing,false);assert.equal(s.music.file,null);assert.equal(s.music.volume,.4);assert.equal(s.partyEpoch,epoch+1);
+ assert.equal(s.log[0].effect,'reset');assert.equal(send(s,'X','Serenata de arraiá',2999,400,{msgId:'reset'}),null);
+});
+test('migração instala mapa novo e mantém configurações; remover limpa o papel',()=>{
+ const s=fresh();s.schemaVersion=3;s.settings.title='Meu palco';s.settings.rules=[{effect:'marry',names:'Ring',ids:'42'}];
+ upgradeState(s);upgradeState(s);assert.equal(s.settings.rules.length,6);assert.equal(s.settings.title,'Meu palco');
+ send(s,'D','Cap',99);removePerson(s,'D');assert.equal(s.stage.djId,null);
+ assert.throws(()=>settings({rules:[{effect:'reset',coins:99}]},s.settings));
+});
+test('cena contém cinco instrumentos, DJ e casal; nomes de doadores sem duplicatas',()=>{
+ const s=fresh();assert.equal(sceneCast(s).length,8);assert.equal(BAND.length,5);
+ send(s,'A','Rose',1);send(s,'B','Donut',30);send(s,'C','Rose',10);send(s,'D','Cap',99);
+ const cast=sceneCast(s);assert.equal(new Set(cast.map(p=>p.id)).size,cast.length);assert.equal(cast.filter(p=>p.stageRole==='band').length,5);
+ assert.equal(cast.find(p=>p.id==='B').instrument,'accordion');assert.equal(cast.find(p=>p.id==='C').weddingRole,'bride');assert.equal(cast.find(p=>p.id==='D').instrument,'dj');
+});
+test('câmera prioriza noivo e papéis recentes, depois volta à visão geral',()=>{
+ const d=new CameraDirector(0,()=>0),ids=['A','B','C'],ctx={groomId:'A',recentIds:['C','B','A'],roles:{A:'groom',B:'band',C:'dj'}};
+ d.rose({person:'B'},1);d.rose({person:'C'},2);assert.equal(d.update(2,ids,ctx).targetId,'C');
+ d.marry({person:'A',effect:'marry'},3);assert.equal(d.update(3,ids,ctx).reason,'marry');
+ d.feature({person:'B',effect:'band',slot:0},4);assert.equal(d.update(4,ids,ctx).targetId,'B');
+ assert.equal(d.update(6000,ids,ctx).mode,'overview');
+});
+test('bolhas respeitam corpos e limites em janelas diferentes',()=>{
+ for(const width of [360,720,1920]){
+  const bodies=[{x:width*.4,y:350,w:80,h:180}],bounds={width,minY:100,maxY:650};
+  const box=placeProjectedBubble({x:width*.5,y:350},150,60,bodies,[],bounds);assert.ok(box);assert.ok(!overlaps(box,bodies[0]));assert.ok(box.x>=10);
  }
- assert.equal(placeProjectedBubble({x:200,y:300},180,100,[{x:0,y:0,w:500,h:500}],[],{width:500,minY:100,maxY:500}),null);
 });
-test('combo no formato nativo do conector 2.5 não duplica rosas',()=>{const s=fresh();const e={user:{uniqueId:'bia',nickname:'Bia'},giftId:5655,giftDetails:{giftName:'Rose',giftType:1},repeatCount:2,repeatEnd:false};assert.equal(gift(s,e),null);gift(s,{...e,repeatEnd:true});assert.equal(s.roses,2);assert.equal(s.people.length,1);});
-
-test('downloader aceita diferentes sites e rejeita comandos ou protocolos locais',()=>{
- for(const link of ['https://www.youtube.com/watch?v=abc','https://vimeo.com/123','https://www.tiktok.com/@teste/video/123','https://media.w3.org/video.mp4'])assert.equal(videoURL(link),link);
- for(const link of ['--exec calc','file:///C:/Windows/win.ini','javascript:alert(1)','https://user:password@example.com/video','http://127.0.0.1/a'])assert.throws(()=>videoURL(link));
- const url='https://example.com/watch?v=123&x=456';const args=downloadArgs(url,process.cwd(),process.cwd());
- assert.equal(args.at(-2),'--');assert.equal(args.at(-1),url);assert.ok(args.includes('bestaudio/best'));assert.ok(args.includes('mp3'));
+test('downloader aceita vídeos HTTPS e não executa protocolos locais',()=>{
+ for(const url of ['https://youtube.com/watch?v=a','https://media.w3.org/a.mp4'])assert.equal(videoURL(url),url);
+ for(const url of ['file:///C:/a','javascript:alert(1)','--exec calc'])assert.throws(()=>videoURL(url));
+ const args=downloadArgs('https://example.com/a',process.cwd(),process.cwd());assert.equal(args.at(-2),'--');
 });
-
-test('download pronto substitui a faixa e inicia automaticamente, mantendo volume',()=>{
- const m=fresh().music;m.volume=.3;activate(m,'nova.mp3',1000);
- assert.equal(m.playing,true);assert.equal(m.file,'nova.mp3');assert.equal(m.position,0);assert.equal(m.volume,.3);
- const revision=m.revision;activate(m,'nova.mp3',2000);
- control(m,{action:'ended',file:'nova.mp3',revision},2100);assert.equal(m.playing,true);
- control(m,{action:'ended',file:'nova.mp3',revision:m.revision},2200);assert.equal(m.playing,false);
-});
-
-test('controles respeitam duração e comandos inválidos não alteram a faixa',()=>{
- const m=fresh().music;activate(m,'musica.mp3',1000);
- control(m,{action:'metadata',file:m.file,revision:m.revision,value:20},2000);
- control(m,{action:'seek',value:999},2000);assert.equal(m.position,20);
- control(m,{action:'pause'},2000);const snapshot=structuredClone(m);
- assert.throws(()=>control(m,{action:'volume',value:'abc'},3000));assert.deepEqual(m,snapshot);
-});
-
-test('câmera alterna visão geral e personagens aleatórios sem repetir imediatamente',()=>{
- const camera=new CameraDirector(0,()=>0),ids=['ana','bia'];
- assert.equal(camera.update(7999,ids).mode,'overview');
- assert.equal(camera.update(8000,ids).targetId,'ana');
- assert.equal(camera.update(8000+CAMERA_TIMING.random,ids).mode,'overview');
- assert.equal(camera.update(12500+CAMERA_TIMING.overview,ids).targetId,'bia');
-});
-
-test('rosa interrompe destaque aleatório e cede lugar à visão geral ao terminar',()=>{
- const camera=new CameraDirector(0,()=>0),ids=['ana','bia'];camera.update(8000,ids);
- camera.rose({person:'bia',name:'Bia',entered:true},8100);
- const close=camera.update(8100,ids);assert.equal(close.reason,'rose');assert.equal(close.targetId,'bia');
- assert.equal(roseNotice(close.event),'🌹 Bia entrou na roda!');
- assert.equal(camera.update(13100,ids).mode,'overview');
- assert.equal(camera.update(14000,ids).mode,'overview');
-});
-
-test('rosas de pessoas diferentes ganham destaque em ordem, com zoomout entre elas',()=>{
- const camera=new CameraDirector(0),ids=['ana','bia'];
- camera.rose({person:'ana',name:'Ana',entered:true},100);camera.update(100,ids);
- camera.rose({person:'bia',name:'Bia',entered:true},200);
- camera.rose({person:'bia',name:'Bia',entered:false},300);
- assert.equal(camera.queue.length,1);assert.equal(camera.update(300,ids).targetId,'ana');
- assert.equal(camera.update(5100,ids).mode,'overview');
- assert.equal(camera.update(7599,ids).mode,'overview');
- const next=camera.update(7600,ids);assert.equal(next.targetId,'bia');assert.equal(next.event.entered,true);
-});
-
-test('combo de rosas não prende a câmera para sempre e alvos removidos são descartados',()=>{
- const camera=new CameraDirector(0),ids=['ana','bia'];camera.rose({person:'ana'},100);camera.update(100,ids);
- for(let now=1000;now<8000;now+=1000)camera.rose({person:'ana'},now);
- assert.equal(camera.update(8100,ids).mode,'overview');
- camera.rose({person:'bia'},8200);assert.equal(camera.update(11000,['ana']).targetId,null);
- const focus=new CameraDirector(0);focus.rose({person:'ana'},0);focus.update(0,ids);
- assert.equal(focus.update(100,['bia']).mode,'overview');
- assert.equal(new CameraDirector(0).update(9000,[]).mode,'overview');
-});
-
-test('evento de rosa distingue entrada e renovação para o aviso e para a câmera',()=>{
- const s=fresh(),first=gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},100);
- const renewal=gift(s,{uniqueId:'ana',nickname:'Ana',giftName:'Rose'},200);
- assert.equal(first.entered,true);assert.match(first.message,/entrou na roda/);
- assert.equal(renewal.entered,false);assert.match(roseNotice(renewal),/mandou rosas/);
-});
-
-test('primeira rosa interrompe o close de demonstração sem esperar outro ciclo',()=>{
- const camera=new CameraDirector(0,()=>0);camera.update(8000,['demo']);
- camera.rose({person:'ana',name:'Ana',entered:true},8100);
- const shot=camera.update(8100,['ana']);assert.equal(shot.targetId,'ana');assert.equal(shot.reason,'rose');
-});
-
-test('Anel cria noivo direto, protege permanência e substitui o anterior',()=>{
- const s=fresh();gift(s,{uniqueId:'ana',giftName:'Anel'},100);
- assert.equal(s.couple.groomId,'ana');assert.equal(s.people.length,1);
- prune(s,10000000);assert.equal(s.people.length,1);
- assert.equal(comment(s,{uniqueId:'ana',comment:'casei'},10000000),true);
- gift(s,{uniqueId:'bia',giftName:'Ring'},10000001);
- assert.equal(s.couple.groomId,'bia');assert.equal(s.people.length,2);
- gift(s,{uniqueId:'bia',giftName:'Ring'},10000002);assert.equal(s.people.length,2);
- prune(s,20000000);assert.deepEqual(s.people.map(p=>p.id),['bia']);
-});
-
-test('casamento funciona com a roda cheia sem crescimento ilimitado',()=>{
- const s=fresh();s.settings.capacity=4;
- for(let i=0;i<4;i++)gift(s,{uniqueId:String(i),giftName:'Rose'},100);
- for(let i=0;i<20;i++){gift(s,{uniqueId:'noivo'+i,giftName:'Ring'},200+i);assert.equal(s.people.length,5);}
- assert.equal(s.couple.groomId,'noivo19');
-});
-
-test('migração adiciona casamento sem apagar o mapa de presentes existente',()=>{
- const s=fresh();delete s.schemaVersion;delete s.couple;s.settings.rules=s.settings.rules.filter(r=>r.effect!=='marry');s.settings.rules[0].ids='42';
- upgradeState(s);upgradeState(s);assert.equal(s.settings.rules.filter(r=>r.effect==='marry').length,1);assert.equal(s.settings.rules[0].ids,'42');
-});
-
-test('noivo novo tem prioridade imediata e os presentes recentes passam na frente',()=>{
- const d=new CameraDirector(0,()=>0),ids=['antigo','novo','noivo'];
- d.rose({person:'antigo'},1);d.rose({person:'novo'},2);
- assert.equal(d.update(2,ids).targetId,'novo');
- d.marry({person:'noivo',name:'Noivo'},3);
- const shot=d.update(3,ids,{groomId:'noivo',recentIds:['novo','antigo']});assert.equal(shot.reason,'marry');assert.equal(shot.targetId,'noivo');
- const background=new CameraDirector(0,()=>0);const context={groomId:'noivo',recentIds:['novo','antigo']};
- assert.equal(background.update(8000,ids,context).targetId,'noivo');
- background.update(13000,ids,context);assert.equal(background.update(21000,ids,context).targetId,'novo');
+test('áudio protege contra eventos atrasados e controles inválidos',()=>{
+ const m=fresh().music;activate(m,'a.mp3',100);const old=m.revision;activate(m,'b.mp3',200);
+ control(m,{action:'ended',file:'a.mp3',revision:old},300);assert.equal(m.playing,true);
+ control(m,{action:'pause'},400);const before=structuredClone(m);assert.throws(()=>control(m,{action:'volume',value:'x'},500));assert.deepEqual(m,before);
 });

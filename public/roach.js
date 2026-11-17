@@ -1,175 +1,118 @@
 import * as THREE from '/vendor/three/three.module.js';
-
-const sphere = new THREE.SphereGeometry(1, 18, 12);
-const capsule = new THREE.CylinderGeometry(1, 1, 1, 8);
-const white = new THREE.MeshStandardMaterial({color: '#fff3d2', roughness: .38});
-const black = new THREE.MeshStandardMaterial({color: '#100b17', roughness: .22});
-const shoe = new THREE.MeshStandardMaterial({color: '#e9e2ff', roughness: .5});
-const palettes = ['#bd6932', '#72a47a', '#9666bd', '#e2ae46', '#456b93', '#a54867', '#58362b', '#c2b7a2'];
-const heartCanvas = document.createElement('canvas'); heartCanvas.width = heartCanvas.height = 64;
-const heartContext = heartCanvas.getContext('2d'); heartContext.fillStyle = '#ff82c7';
-heartContext.beginPath(); heartContext.moveTo(32, 56); heartContext.bezierCurveTo(1, 35, 1, 7, 20, 8);
-heartContext.bezierCurveTo(28, 8, 32, 14, 32, 17); heartContext.bezierCurveTo(35, 6, 61, 2, 62, 22);
-heartContext.bezierCurveTo(62, 36, 44, 48, 32, 56); heartContext.fill();
-const heartMaterial = new THREE.SpriteMaterial({map: new THREE.CanvasTexture(heartCanvas), transparent: true, depthWrite: false});
-
-export function characterSeed(id) {
-  let n = 2166136261;
-  for (const c of String(id)) n = Math.imul(n ^ c.charCodeAt(0), 16777619);
-  return n >>> 0;
-}
-
-export function makeRoach(person) {
-  const seed = characterSeed(person.id), variant = seed % 6;
-  const root = new THREE.Group(), dancer = new THREE.Group(); root.add(dancer);
-  const material = new THREE.MeshPhysicalMaterial({color: palettes[seed % palettes.length],
-    metalness: .42, roughness: .29, clearcoat: .8, clearcoatRoughness: .22});
-  const dark = new THREE.MeshStandardMaterial({color: new THREE.Color(palettes[seed % palettes.length]).multiplyScalar(.48), roughness: .45});
-  const accent = new THREE.MeshStandardMaterial({color: new THREE.Color().setHSL((seed % 360) / 360, .8, .65), metalness: .3, roughness: .3});
-  const ownGeometry = [], ownMaterials = [material, dark, accent];
-  function ball(parent, mat, pos, scale) {
-    const mesh = new THREE.Mesh(sphere, mat); mesh.position.set(...pos); mesh.scale.set(...scale);
-    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+import {makeInstrument} from './instruments.js';
+const sphere=new THREE.SphereGeometry(1,16,12),bone=new THREE.CylinderGeometry(1,1,1,8);
+const white=new THREE.MeshStandardMaterial({color:'#fff4de',roughness:.4});
+const black=new THREE.MeshStandardMaterial({color:'#14121e',roughness:.3});
+const shoeMaterial=new THREE.MeshStandardMaterial({color:'#eee4d0',roughness:.65});
+const palette=['#ce7043','#8fa762','#8868bc','#d3a249','#578a9e','#bb6588','#976d53','#c8bba5'];
+export function characterSeed(id){let seed=2166136261;for(const c of String(id))seed=Math.imul(seed^c.charCodeAt(0),16777619);return seed>>>0;}
+export function makeRoach(person){
+ const seed=characterSeed(person.id),variant=seed%6,root=new THREE.Group(),dancer=new THREE.Group();root.add(dancer);
+ const ownedGeometry=[],ownedMaterial=[],parts=[];
+ const material=(color,metalness=0)=>{const m=new THREE.MeshStandardMaterial({color,metalness,roughness:metalness?.32:.65});ownedMaterial.push(m);return m;};
+ const shell=material(palette[seed%palette.length],.45),dark=material('#3e2b2a'),shirt=material(new THREE.Color().setHSL((seed%360)/360,.5,.43));
+ const denim=material(variant%2?'#303b61':'#443044'),accent=material(new THREE.Color().setHSL(((seed+90)%360)/360,.7,.67)),gold=material('#dfb45c',.75);
+ const shirtColor=shirt.color.clone();
+ function ball(parent,mat,pos,scale){const o=new THREE.Mesh(sphere,mat);o.position.set(...pos);o.scale.set(...scale);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+ function line(parent,a,b,r,mat){const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),v=q.clone().sub(p);const o=new THREE.Mesh(bone,mat);o.position.copy(p).add(q).multiplyScalar(.5);o.scale.set(r,v.length(),r);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());o.castShadow=true;parent.add(o);return o;}
+ function shape(parent,geometry,mat,x,y,z){ownedGeometry.push(geometry);const o=new THREE.Mesh(geometry,mat);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o;}
+ // Narrow waist, shoulders, trousers and shoes; the shell and four extra arms retain the insect silhouette.
+ ball(dancer,dark,[0,.9,0],[.39,.58,.3]);
+ for(const side of [-1,1]){const wing=ball(dancer,shell,[side*.23,1.1,-.22],[.26,.68,.15]);wing.rotation.z=side*.08;}
+ for(let i=0;i<4;i++)line(dancer,[-.27,.57+i*.11,.29],[.27,.57+i*.11,.29],.016,shell);
+ const torso=shape(dancer,new THREE.CylinderGeometry(.4,.31,.78,16),shirt,0,1.4,.025);torso.scale.z=.8;
+ ball(dancer,white,[0,1.79,.04],[.18,.045,.17]);
+ for(let i=0;i<3;i++)ball(dancer,gold,[0,1.45-i*.14,.36],[.025,.025,.02]);
+ if(variant%3===0)for(const side of [-1,1])line(dancer,[side*.29,1.72,.28],[side*.22,1.06,.28],.025,white);
+ if(variant%3===1)for(let i=0;i<3;i++)line(dancer,[-.32,1.2+i*.15,.31],[.32,1.2+i*.15,.31],.024,accent);
+ ball(dancer,shell,[0,2.11,.07],[.34,.32,.29]);
+ const eyes=[];
+ for(const side of [-1,1]){
+  eyes.push(ball(dancer,white,[side*.18,2.18,.31],[.145,.17,.11]));
+  ball(dancer,black,[side*.18,2.18,.405],[.063,.083,.037]);
+  ball(dancer,white,[side*.18-.016,2.21,.44],[.02,.025,.012]);
+ }
+ line(dancer,[-.09,1.99,.35],[0,1.95,.385],.018,black);line(dancer,[0,1.95,.385],[.09,1.99,.35],.018,black);
+ const antennae=[];
+ for(const side of [-1,1]){
+  const p=new THREE.Group();p.position.set(side*.18,2.35,0);dancer.add(p);
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(),new THREE.Vector3(side*.23,.36,0),new THREE.Vector3(side*.62,.56,.1)]);
+  shape(p,new THREE.TubeGeometry(curve,12,.022,6,false),dark,0,0,0);ball(p,accent,[side*.62,.56,.1],[.045,.045,.045]);antennae.push(p);
+ }
+ const limbs=[];
+ for(const side of [-1,1])for(let row=0;row<3;row++){
+  const pivot=new THREE.Group();pivot.position.set(side*(row===2?.21:.36),row===0?1.65:row===1?1.13:.6,0);dancer.add(pivot);
+  let hand;
+  if(row<2){
+   line(pivot,[0,0,0],[side*.35,-.13,.05],row===0?.075:.045,row===0?shirt:dark);
+   line(pivot,[side*.35,-.13,.05],[side*.59,.02,.16],.044,shell);
+   hand=ball(pivot,accent,[side*.6,.02,.16],[.095,.09,.085]);
+   for(let i=-1;i<=1;i++)ball(hand,accent,[i*.45,.65,0],[.18,.43,.24]);
+  }else{
+   line(pivot,[0,0,0],[side*.06,-.26,.03],.115,denim);line(pivot,[side*.06,-.26,.03],[side*.04,-.51,.14],.09,denim);
+   ball(pivot,shoeMaterial,[side*.04,-.51,.23],[.17,.095,.28]);line(pivot,[side*.04-.08,-.46,.37],[side*.04+.08,-.46,.37],.012,accent);
   }
-  function limb(parent, start, end, radius, mat) {
-    const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end), delta = b.clone().sub(a);
-    const mesh = new THREE.Mesh(capsule, mat); mesh.position.copy(a).add(b).multiplyScalar(.5);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.clone().normalize());
-    mesh.scale.set(radius, delta.length(), radius); mesh.castShadow = true; parent.add(mesh); return mesh;
+  limbs.push({pivot,side,row,hand});
+ }
+ const hat=new THREE.Group();hat.position.set(0,2.35,.02);dancer.add(hat);
+ if(variant===0||variant===5){for(const side of [-1,1])ball(dancer,black,[side*.18,2.19,.435],[.18,.115,.035]);line(dancer,[-.1,2.2,.45],[.1,2.2,.45],.022,gold);}
+ if(variant===1){ball(hat,accent,[0,.07,0],[.3,.16,.27]);ball(hat,accent,[0,-.02,.27],[.32,.035,.19]);}
+ if(variant===2){const band=shape(hat,new THREE.TorusGeometry(.34,.045,6,18,Math.PI),black,0,-.15,0);for(const side of [-1,1])ball(hat,accent,[side*.34,-.2,0],[.1,.15,.12]);}
+ if(variant===3){shape(hat,new THREE.ConeGeometry(.22,.42,14),accent,0,.2,0);ball(hat,white,[0,.43,0],[.055,.055,.055]);}
+ if(variant===4)for(const side of [-1,1])ball(dancer,gold,[side*.12,1.98,.4],[.13,.045,.04]);
+ let role=null,instrumentId=null,prop=null,costume=null,greetingActive=false;
+ const costumes=new Map();
+ function setRole(next,instrument=null){
+  if(role===next&&instrumentId===instrument)return;
+  if(costume)costume.visible=false;shirt.color.copy(shirtColor);hat.visible=!next||next==='band';
+  role=next;instrumentId=instrument;
+  if(prop){dancer.remove(prop.root);prop.dispose();prop=null;}
+  if(instrument){prop=makeInstrument(instrument);dancer.add(prop.root);}
+  if(!next){costume=null;return;}
+  shirt.color.set(next==='bride'?'#fff3df':next==='groom'?'#20202d':next==='dj'?'#29213d':'#5e4769');
+  if(costumes.has(next)){costume=costumes.get(next);costume.visible=true;return;}
+  costume=new THREE.Group();costumes.set(next,costume);dancer.add(costume);
+  if(next==='bride'){
+   shape(costume,new THREE.ConeGeometry(.62,1.1,24),white,0,.72,.02);
+   const veil=material('#fff8ed');veil.transparent=true;veil.opacity=.48;veil.side=THREE.DoubleSide;
+   shape(costume,new THREE.PlaneGeometry(.9,1.35),veil,0,1.9,-.31);
+   for(let i=-1;i<=1;i++)ball(costume,white,[i*.15,2.39,.07],[.11,.06,.08]);
+  }else if(next==='groom'){
+   ball(costume,white,[0,1.43,.355],[.15,.34,.035]);
+   for(const side of [-1,1])ball(costume,accent,[side*.1,1.72,.39],[.12,.065,.04]);
+  }else if(next==='dj'){
+   const band=shape(costume,new THREE.TorusGeometry(.37,.06,8,20,Math.PI),accent,0,2.18,0);
+   for(const side of [-1,1])ball(costume,black,[side*.37,2.14,0],[.11,.17,.13]);
+   shape(costume,new THREE.TorusGeometry(.13,.02,6,16),gold,0,1.3,.37);
+  }else if(next==='band'){
+   for(const side of [-1,1])line(costume,[side*.3,1.73,.31],[side*.2,1.05,.31],.028,gold);
   }
-  const width = .9 + (seed % 5) * .05;
-  ball(dancer, dark, [0, 1.05, 0], [.54 * width, .82, .36]);
-  for (const side of [-1, 1]) {
-    const wing = ball(dancer, material, [side * .235 * width, 1.13, .16], [.285 * width, .72, .29]);
-    wing.rotation.z = side * -.08;
-  }
-  for (let i = 0; i < 5; i++) {
-    limb(dancer, [-.28 + i * .012, .58 + i * .19, .401], [.28 - i * .012, .58 + i * .19, .401], .016, dark);
-  }
-  ball(dancer, material, [0, 1.89, .1], [.38 * width, .35, .32]);
-  const eyes = [];
-  for (const side of [-1, 1]) {
-    eyes.push(ball(dancer, white, [side * .205, 1.98, .36], [.17, .19, .12]));
-    ball(dancer, black, [side * .205, 1.98, .466], [.075, .095, .042]);
-    ball(dancer, white, [side * .19 - .02, 2.02, .5], [.025, .03, .015]);
-  }
-  limb(dancer, [-.1, 1.75, .407], [0, 1.71, .43], .018, black);
-  limb(dancer, [0, 1.71, .43], [.1, 1.75, .407], .018, black);
-  const antennae = [];
-  for (const side of [-1, 1]) {
-    const pivot = new THREE.Group(); pivot.position.set(side * .19, 2.15, .02); dancer.add(pivot);
-    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(side * .25, .42, 0), new THREE.Vector3(side * .65, .6, .13)]);
-    const geometry = new THREE.TubeGeometry(curve, 14, .024, 6, false); ownGeometry.push(geometry);
-    pivot.add(new THREE.Mesh(geometry, dark)); ball(pivot, accent, [side * .65, .6, .13], [.055, .055, .055]); antennae.push(pivot);
-  }
-  // Three articulated pairs: two arm pairs and the bottom dancing legs.
-  const limbs = []; let greetingActive = false;
-  for (const side of [-1, 1]) for (let row = 0; row < 3; row++) {
-    const pivot = new THREE.Group(); pivot.position.set(side * (.37 + row * .025), 1.5 - row * .48, 0); dancer.add(pivot);
-    let hand, fingers;
-    if (row < 2) {
-      limb(pivot, [0, 0, 0], [side * .43, -.15, .06], .045, dark);
-      limb(pivot, [side * .43, -.15, .06], [side * .62, .08, .16], .04, material);
-      hand = ball(pivot, accent, [side * .63, .08, .16], [.1, .095, .09]);
-      if (row === 0 && side === 1) {
-        fingers = new THREE.Group(); fingers.visible = false; hand.add(fingers);
-        for (let i = -1; i <= 1; i++) ball(fingers, accent, [i * .48, .8, 0], [.2, .65, .28]);
-        ball(fingers, accent, [-1, .1, .05], [.6, .23, .28]);
-      }
-    } else {
-      limb(pivot, [0, 0, 0], [side * .2, -.28, .02], .055, dark);
-      limb(pivot, [side * .2, -.28, .02], [side * .12, -.48, .18], .05, material);
-      ball(pivot, variant === 5 ? accent : shoe, [side * .13, -.48, .22], [.19, .1, .28]);
+ }
+ const aura=shape(root,new THREE.TorusGeometry(.66,.023,6,32),new THREE.MeshBasicMaterial({color:'#f8b6dd'}),0,.035,0);ownedMaterial.push(aura.material);aura.rotation.x=-Math.PI/2;aura.visible=false;
+ return {root,dancer,seed,variant,material:shell,setRole,
+  setWeddingRole(next){setRole(next,null);},
+  get weddingRole(){return ['groom','bride'].includes(role)?role:null;},get stageRole(){return role;},get instrument(){return instrumentId;},
+  get isGreeting(){return greetingActive;},get greetingArm(){return limbs.find(l=>l.row===0&&l.side===1).pivot;},
+  animate(t,person,now,beat=0,greeting=false){
+   greetingActive=greeting;const phase=t*(4.1+variant*.19)+seed%100,effect=person.effectUntil>now?person.effect:'';
+   dancer.position.y=Math.abs(Math.sin(phase))*(.045+beat*.1)+(effect==='jump'?Math.abs(Math.sin(t*8))*.7:0);
+   dancer.rotation.z=Math.sin(phase*.5)*(prop?.035:.09);dancer.rotation.x=Math.cos(phase)*.035;root.rotation.y=Math.sin(phase*.3)*.15;
+   for(const {pivot,side,row,hand} of limbs){
+    pivot.rotation.z=side*Math.sin(phase+row*1.5)* (row===2?.19:.48);pivot.rotation.x=Math.sin(phase+row)*.2;
+    if(hand){hand.rotation.set(0,0,0);hand.scale.set(.095,.09,.085);}
+    if(prop&&row===0){pivot.rotation.z=side*-.45;pivot.rotation.x=-.6;
+     if(instrumentId==='drums'){pivot.rotation.x=-.5+Math.sin(t*9+side)*.3;}
+     if(instrumentId==='harmonica'){pivot.rotation.z=side*.85;pivot.rotation.x=-.45;}
+     if(instrumentId==='accordion'){pivot.rotation.z=side*(-.25+Math.sin(t*4)*.07);}
     }
-    limbs.push({pivot, side, row, hand, fingers});
-  }
-  const hat = new THREE.Group(); hat.position.set(0, 2.14, .04); dancer.add(hat);
-  if (variant === 0) { // Sunglasses.
-    for (const side of [-1, 1]) ball(dancer, black, [side * .21, 2, .49], [.21, .13, .05]);
-    limb(dancer, [-.15, 2.01, .5], [.15, 2.01, .5], .03, accent);
-  } else if (variant === 1) { // Party cone.
-    const geometry = new THREE.ConeGeometry(.27, .6, 14); ownGeometry.push(geometry);
-    const cone = new THREE.Mesh(geometry, accent); cone.position.y = .28; hat.add(cone);
-    ball(hat, white, [0, .6, 0], [.08, .08, .08]);
-  } else if (variant === 2) { // Headphones.
-    const geometry = new THREE.TorusGeometry(.4, .055, 8, 20, Math.PI); ownGeometry.push(geometry);
-    const band = new THREE.Mesh(geometry, accent); band.position.y = -.13; hat.add(band);
-    for (const side of [-1, 1]) ball(dancer, accent, [side * .4, 1.96, .03], [.12, .2, .17]);
-  } else if (variant === 3) {
-    ball(hat, accent, [0, .09, .01], [.34, .18, .29]); ball(hat, accent, [0, -.02, .32], [.36, .045, .24]);
-  } else if (variant === 4) {
-    for (const side of [-1, 1]) ball(dancer, white, [side * .15, 1.73, .45], [.14, .07, .055]);
-  }
-  const crown = new THREE.Group(); crown.position.set(0, 2.2, .1); crown.visible = false; dancer.add(crown);
-  for (let i = -1; i <= 1; i++) {
-    const geometry = new THREE.ConeGeometry(.095, .3 + (i === 0 ? .1 : 0), 4); ownGeometry.push(geometry);
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: '#ffe17b', metalness: .75, roughness: .2}));
-    ownMaterials.push(mesh.material); mesh.position.set(i * .19, .18, 0); crown.add(mesh);
-  }
-  const auraGeometry = new THREE.TorusGeometry(.8, .025, 6, 36); ownGeometry.push(auraGeometry);
-  const auraMaterial = new THREE.MeshBasicMaterial({color: '#ffb5eb'}); ownMaterials.push(auraMaterial);
-  const aura = new THREE.Mesh(auraGeometry, auraMaterial); aura.rotation.x = -Math.PI / 2; aura.position.y = .04; root.add(aura); aura.visible = false;
-  const hearts = Array.from({length: 3}, () => {const sprite = new THREE.Sprite(heartMaterial);sprite.visible = false;sprite.scale.setScalar(.33);dancer.add(sprite);return sprite;});
-  const scale = .83 + (seed % 4) * .065; root.scale.setScalar(scale);
-  const originalColor=material.color.clone(),weddingCostumes=new Map();let weddingRole=null,weddingOutfit=null;
-  function setWeddingRole(role){
-    if(role===weddingRole)return;
-    weddingRole=role;hat.visible=!role;material.color.copy(originalColor);
-    if(weddingOutfit){weddingOutfit.visible=false;weddingOutfit=null;}
-    if(!role)return;
-    material.color.set(role==='bride'?'#f9e7c5':'#211a2e');
-    if(weddingCostumes.has(role)){weddingOutfit=weddingCostumes.get(role);weddingOutfit.visible=true;return;}
-    weddingOutfit=new THREE.Group();dancer.add(weddingOutfit);
-    weddingCostumes.set(role,weddingOutfit);
-    const fabric=new THREE.MeshStandardMaterial({color:role==='bride'?'#fff3df':'#191629',roughness:.7});ownMaterials.push(fabric);
-    material.color.set(role==='bride'?'#f9e7c5':'#211a2e');
-    if(role==='bride'){
-      const skirtGeometry=new THREE.ConeGeometry(.69,1.2,24);ownGeometry.push(skirtGeometry);
-      const skirt=new THREE.Mesh(skirtGeometry,fabric);skirt.position.y=.65;skirt.castShadow=true;weddingOutfit.add(skirt);
-      const veilMaterial=new THREE.MeshStandardMaterial({color:'#fff9f3',transparent:true,opacity:.55,side:THREE.DoubleSide,roughness:1});ownMaterials.push(veilMaterial);
-      const veilGeometry=new THREE.PlaneGeometry(1,1.4);ownGeometry.push(veilGeometry);
-      const veil=new THREE.Mesh(veilGeometry,veilMaterial);veil.position.set(0,1.65,-.3);weddingOutfit.add(veil);
-      for(let i=-1;i<=1;i++)ball(weddingOutfit,white,[i*.16,2.21,.08],[.12,.08,.1]);
-    }else{
-      ball(weddingOutfit,white,[0,1.22,.43],[.21,.48,.045]);
-      for(const side of [-1,1])ball(weddingOutfit,accent,[side*.12,1.61,.49],[.14,.085,.05]);
-      for(let i=0;i<3;i++)ball(weddingOutfit,black,[0,1.35-i*.16,.49],[.025,.025,.02]);
-    }
-  }
-  return {root, dancer, seed, variant, material,
-    setWeddingRole,get weddingRole(){return weddingRole;},
-    get isGreeting() { return greetingActive; },
-    get greetingArm() { return limbs.find(limb => limb.row === 0 && limb.side === 1).pivot; },
-    animate(t, person, now, beat = 0, greeting = false) {
-      greetingActive = greeting;
-      const phase = t * (4.2 + variant * .23) + seed % 100;
-      const effect = person.effectUntil > now ? person.effect : '';
-      dancer.position.y = Math.abs(Math.sin(phase)) * (.07 + beat * .13) + (effect === 'jump' ? Math.abs(Math.sin(t * 8)) * .95 : 0);
-      dancer.rotation.z = Math.sin(phase / 2) * (.12 + variant * .015);
-      dancer.rotation.x = Math.cos(phase) * .07;
-      root.rotation.y = Math.sin(phase / 3) * .25;
-      if (greeting) { root.rotation.y = .1; dancer.rotation.z *= .2; dancer.rotation.x = 0; }
-      for (const {pivot, side, row, hand, fingers} of limbs) {
-        pivot.rotation.z = side * Math.sin(phase + row * 1.4 + (side < 0 ? Math.PI : 0)) * (row === 2 ? .3 : .65);
-        pivot.rotation.x = Math.sin(phase + row) * .3;
-        if (fingers) fingers.visible = greeting;
-        if (hand) hand.scale.set(.1, .095, .09);
-        if (greeting && row === 0 && side === 1) {
-          // Keep the palm next to the face and wave independently of dance speed.
-          pivot.rotation.z = 1.25 + Math.sin(now * .011) * .32;
-          pivot.rotation.x = -.2 + Math.cos(now * .011) * .1;
-          hand.scale.set(.145, .15, .11);
-        }
-      }
-      antennae.forEach((a, i) => { a.rotation.z = Math.sin(phase * .7 + i) * .16; });
-      crown.visible = effect === 'king';
-      hearts.forEach((heart, i) => {heart.visible = effect === 'heart'||!!weddingRole;heart.position.set(Math.sin(t * 2 + i * 2) * .7, 2.5 + (t * .5 + i * .3) % .9, .35);});
-      aura.visible = effect !== '';
-      aura.material.color.set(effect === 'heart' ? '#ff75c5' : effect === 'galaxy' ? '#a799ff' : '#c5ff8c');
-      aura.scale.setScalar(1 + Math.sin(t * 5) * .09);
-      material.emissive.set(effect === 'glow' ? '#855c20' : effect === 'galaxy' ? '#39165b' : '#000000');
-      eyes.forEach(eye => eye.scale.y = Math.sin(t * 1.7 + seed) > .998 ? .045 : .19);
-    },
-    dispose() { ownGeometry.forEach(g => g.dispose()); ownMaterials.forEach(m => m.dispose()); }
-  };
+    if(greeting&&row===0&&side===1){pivot.rotation.z=1.0+Math.sin(now*.011)*.28;pivot.rotation.x=-.22;hand.rotation.z=-pivot.rotation.z;hand.scale.set(.13,.14,.11);}
+   }
+   if(greeting)root.rotation.y=.08;
+   antennae.forEach((a,i)=>a.rotation.z=Math.sin(phase*.6+i)*.13);
+   eyes.forEach(e=>e.scale.y=Math.sin(t*1.5+seed)>.998?.04:.17);
+   aura.visible=!!effect||!!role;aura.material.color.set(role?'#efb5d6':effect==='galaxy'?'#b3a2ff':'#d6fb79');
+   prop?.animate(t,beat);
+  },
+  dispose(){prop?.dispose();ownedGeometry.forEach(g=>g.dispose());ownedMaterial.forEach(m=>m.dispose());}
+ };
 }

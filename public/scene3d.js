@@ -2,13 +2,15 @@ import * as THREE from '/vendor/three/three.module.js';
 import {makeRoach} from './roach.js';
 import {overlaps, placeProjectedBubble} from './layout.js';
 import {CameraDirector, roseNotice} from './camera-director.js';
+import {sceneCast} from './party-layout.js';
+import {addBackstage} from './backstage.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
 document.body.classList.toggle('preview', preview);
 let state = {settings: {speed: 1, comments: true}, people: [], music: {}, log: []};
 let offset = 0, elapsed = 0, frame = 0, lastTick = performance.now(), lastRender = 0;
-let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0;
+let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0,resetUntil=0;
 $('quality').textContent = high ? 'Qualidade: alta' : 'Qualidade: leve';
 const audio = $('audio'), channel = new BroadcastChannel('roda-live-audio');
 const ownerId = crypto.randomUUID(); let audioOwner = false, audioKey = '', metadataKey = '';
@@ -70,8 +72,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 renderer.shadowMap.enabled = !preview; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, .1, 180);
-const director = new CameraDirector(performance.now());
-const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0, .7, 0);
+let director = new CameraDirector(performance.now());
+const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0, 1, -2.5);
 const cameraAim = overviewAim.clone(), desiredCamera = new THREE.Vector3(), desiredAim = new THREE.Vector3();
 let cameraInitialized = false, shot = director.update(performance.now(), []), shownShot = -1;
 scene.add(new THREE.HemisphereLight('#e4c3ff', '#24132b', 2.3));
@@ -106,10 +108,12 @@ for (const x of [-.5, .5]) {
 }
 const disco = mesh(new THREE.IcosahedronGeometry(.56, 2), new THREE.MeshStandardMaterial({color: '#d8c5e4', metalness: .95, roughness: .19}), 5.6);
 const wire = mesh(new THREE.CylinderGeometry(.012, .012, 2.2, 6), new THREE.MeshBasicMaterial({color: '#807087'}), 7.25);
+disco.position.set(-7.8,6,-5);wire.position.set(-7.8,7.65,-5);
 const positions = new Float32Array(96 * 3);
 for (let i = 0; i < 96; i++) { positions[i * 3] = Math.sin(i * 137.5) * (8 + i % 4); positions[i * 3 + 1] = (i % 13) * .65 + .2; positions[i * 3 + 2] = Math.cos(i * 137.5) * 8; }
 const particlesGeometry = new THREE.BufferGeometry(); particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 const particles = new THREE.Points(particlesGeometry, new THREE.PointsMaterial({color: '#eac2df', size: .045, transparent: true, opacity: .6})); scene.add(particles);
+addBackstage(scene);
 
 let viewport = {width: 1, height: 1, top: 0, left: 0};
 function resize() {
@@ -117,8 +121,8 @@ function resize() {
   const ratio = Math.min(devicePixelRatio || 1, high && !preview ? 2 : 1, 2400 / Math.max(bounds.width, bounds.height));
   renderer.setPixelRatio(ratio); renderer.setSize(bounds.width, bounds.height, false);
   camera.aspect = bounds.width / bounds.height;
-  const distance = Math.max(26, 24 / camera.aspect);
-  overviewPosition.set(0, distance * .64, distance * .83);
+  const distance = Math.max(31, 28 / camera.aspect);
+  overviewPosition.set(1, distance * .64, distance * .83-2.5);
   if (!cameraInitialized) {camera.position.copy(overviewPosition); cameraAim.copy(overviewAim); cameraInitialized = true;}
   camera.lookAt(cameraAim); camera.updateProjectionMatrix();
 }
@@ -141,8 +145,9 @@ function reconcile(people) {
       line.setAttribute('stroke', '#ffdbbe99'); line.setAttribute('stroke-width', '1'); line.style.display = 'none'; $('connectors').append(line);
       entry = {model, name, bubble, line, person}; characters.set(person.id, entry);
     }
-    entry.person = person; entry.name.textContent = person.weddingRole==='groom'?'💍 '+person.name:person.name;
-    entry.model.setWeddingRole(person.weddingRole||null);
+    entry.person = person; entry.name.textContent = (person.donor?(person.icon||'🌹')+' ':'')+person.name;
+    entry.name.classList.toggle('donor-name',!!person.donor);entry.name.classList.toggle('role-placeholder',!!person.stageResident&&!person.donor);
+    entry.model.setRole(person.stageRole||null,person.instrument||null);
   }
   renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
 }
@@ -155,6 +160,9 @@ function showEventToast(message, entry = false) {
   if (entry) toastProtectedUntil = Date.now() + 3000;
 }
 function updateState(next) {
+  if(receivedSnapshot&&(next.partyEpoch||0)!==(state.partyEpoch||0)){
+    director=new CameraDirector(performance.now());shownShot=-1;shot=director.update(performance.now(),[]);toastProtectedUntil=0;
+  }
   state = next; offset = next.serverTime - Date.now(); $('offline').hidden = true;
   document.body.classList.toggle('transparent', !!next.settings.transparent);
   const defaultTitle = !next.settings.title || next.settings.title === 'A RODA É SUA';
@@ -164,18 +172,17 @@ function updateState(next) {
   $('demoHint').hidden = next.people.length > 0;
   $('nowTrack').hidden = !next.music.playing || !next.track;
   $('trackLabel').textContent = next.track?.title || '';
-  const groom=next.people.find(person=>person.id===next.couple?.groomId);
-  const dancers=next.people.length?next.people.filter(person=>person.id!==groom?.id):demo;
-  reconcile([...dancers,
-    {id:'@couple:bride',name:'Noiva da pista',weddingRole:'bride',stageResident:true},
-    {...(groom||{id:'@couple:groom',name:'Mande um Anel'}),weddingRole:'groom',stageResident:true}]);
+  reconcile(sceneCast(next,preview?demo:[]));
   void synchronizeAudio();
   // The first snapshot is a baseline; opening/reconnecting the scene never replays old entries.
   for (const event of [...next.log].reverse()) {
     if (seenEvents.has(event.id)) continue;
     seenEvents.add(event.id);
     if (!receivedSnapshot || next.serverTime - event.at > 15000) continue;
-    if (event.effect === 'marry') director.marry(event, performance.now());
+    if(event.effect==='reset'){
+      resetUntil=Date.now()+6500;$('finaleName').textContent=event.name+' reiniciou a festa!';showEventToast('🎆 '+event.message,true);
+    }
+    else if (['marry','bride','band','dj'].includes(event.effect)) director.feature(event, performance.now());
     else if (event.effect === 'join') director.rose(event, performance.now());
     else if (Date.now() >= toastProtectedUntil) showEventToast(event.icon + ' ' + event.message);
   }
@@ -188,18 +195,21 @@ function project(x, y, z) {
   return {x: viewport.left + (v.x + 1) * viewport.width / 2, y: viewport.top + (1 - v.y) * viewport.height / 2, visible: v.z >= -1 && v.z <= 1};
 }
 function moveCamera(time, dt, entries) {
-  const selectable=entries.filter(entry=>!entry.person.stageResident||entry.person.id===state.couple?.groomId);
-  const recentIds=[...selectable].sort((a,b)=>(b.person.joinedAt||0)-(a.person.joinedAt||0)).map(entry=>entry.person.id);
-  shot = director.update(time, selectable.map(entry => entry.person.id),{groomId:state.couple?.groomId,recentIds});
+  const selectable=entries.filter(entry=>entry.person.donor||entry.person.demo);
+  const recentIds=[...selectable].sort((a,b)=>Math.max(b.person.joinedAt||0,b.person.lastGiftAt||0)-Math.max(a.person.joinedAt||0,a.person.lastGiftAt||0)).map(entry=>entry.person.id);
+  const roles=Object.fromEntries(selectable.map(entry=>[entry.person.id,entry.person.stageRole]));
+  shot = director.update(time, selectable.map(entry => entry.person.id),{groomId:state.couple?.groomId,recentIds,roles});
   desiredCamera.copy(overviewPosition); desiredAim.copy(overviewAim);
   const featured = characters.get(shot.targetId);
   if (shot.mode === 'focus' && featured) {
     const root = featured.model.root, scale = root.scale.x;
-    desiredAim.set(root.position.x, 1.4 * scale + featured.model.dancer.position.y * .3, root.position.z);
+    desiredAim.set(root.position.x,root.position.y+1.5 * scale + featured.model.dancer.position.y * .3, root.position.z);
     const distance = Math.max(5.6, 4.2 / camera.aspect) * Math.max(.85, scale);
     desiredCamera.copy(desiredAim).add(new THREE.Vector3(.65, 2.1 * scale, distance));
-    if(shot.reason==='marry'||shot.reason==='groom'){
-      desiredAim.set(0,1.7,.1);desiredCamera.set(.2,4.1,Math.max(7.2,5/camera.aspect));
+    if(['bride','groom'].includes(featured.person.stageRole)){
+      desiredAim.set(0,1.8,.1);desiredCamera.set(.2,4.4,Math.max(7.8,5.3/camera.aspect));
+    }else if(featured.person.stageRole==='band'||featured.person.stageRole==='dj'){
+      desiredCamera.copy(desiredAim).add(new THREE.Vector3(.35,2.1,Math.max(7,4.5/camera.aspect)));
     }
   }
   const blend = 1 - Math.exp(-dt * 3.2);
@@ -209,6 +219,7 @@ function moveCamera(time, dt, entries) {
     for (const entry of entries) entry.name.classList.toggle('camera-focus', entry.person.id === shot.targetId);
     if (shot.mode === 'focus' && shot.reason === 'rose') showEventToast(roseNotice(shot.event), true);
     if (shot.mode === 'focus' && shot.reason === 'marry') showEventToast('💍 '+shot.event.name+' se casou! É o novo noivo!',true);
+    if(shot.mode==='focus'&&shot.reason==='role')showEventToast(shot.event.icon+' '+shot.event.message,true);
   }
 }
 let projected = [], bubbleBoxes = [];
@@ -216,17 +227,17 @@ function labelLayout(entries, now) {
   const w = innerWidth, h = innerHeight, obstacles = [], active = [];
   for (const entry of entries) {
     const root = entry.model.root, scale = root.scale.x;
-    const head = project(root.position.x, 3.5 * scale + entry.model.dancer.position.y, root.position.z);
-    const feet = project(root.position.x, 0, root.position.z);
+    const head = project(root.position.x,root.position.y+3.5 * scale + entry.model.dancer.position.y, root.position.z);
+    const feet = project(root.position.x,root.position.y,root.position.z);
     entry.bubble.hidden = true; entry.line.style.display = 'none';
     const visible = head.visible && feet.visible && feet.x > -100 && feet.x < w + 100 && feet.y > 0 && head.y < h;
     entry.name.hidden = !visible;
     if (!visible) continue;
-    const left = project(root.position.x - 1.1 * scale, 1.3, root.position.z);
-    const right = project(root.position.x + 1.1 * scale, 1.3, root.position.z);
+    const left = project(root.position.x - 1.1 * scale,root.position.y+1.3, root.position.z);
+    const right = project(root.position.x + 1.1 * scale,root.position.y+1.3, root.position.z);
     const body = {x: left.x - 5, y: head.y - 5, w: right.x - left.x + 10, h: feet.y - head.y + 32};
     obstacles.push(body); entry.anchor = {x: head.x, y: head.y};
-    entry.name.style.left = feet.x + 'px'; entry.name.style.top = feet.y + 5 + 'px';
+    entry.name.style.left = feet.x + 'px'; entry.name.style.top = (entry.person.donor?head.y:feet.y+5)+'px';
     entry.name.style.zIndex = Math.round(feet.y);
     const nameRect = entry.name.getBoundingClientRect();
     obstacles.push({x: nameRect.x - 3, y: nameRect.y - 3, w: nameRect.width + 6, h: nameRect.height + 6});
@@ -273,8 +284,8 @@ function draw(time) {
     }
   });
   for(const entry of entries.filter(entry=>entry.person.stageResident)){
-    entry.model.root.position.set(entry.person.weddingRole==='bride'?-.72:.72,.55,0);
-    entry.model.root.scale.setScalar(.95);entry.model.animate(elapsed*.75,entry.person,Date.now()+offset,beat);
+    entry.model.root.position.set(...entry.person.position);
+    entry.model.root.scale.setScalar(entry.person.stageRole==='band'?1:.95);entry.model.animate(elapsed*.8,entry.person,Date.now()+offset,beat);
   }
   moveCamera(time, dt, entries);
   disco.rotation.y = elapsed * .3; disco.rotation.z = Math.sin(elapsed) * .12; particles.rotation.y = elapsed * .01;
@@ -282,6 +293,7 @@ function draw(time) {
   renderer.render(scene, camera);
   if (frame % 2 === 0) labelLayout(entries, Date.now() + offset);
   $('eventToast').classList.toggle('visible', Date.now() < toastUntil);
+  $('finale').hidden=Date.now()>=resetUntil;document.body.classList.toggle('party-reset',Date.now()<resetUntil);
 }
 window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls,
   characters: characters.size, obstacles: projected, bubbles: bubbleBoxes, bubbleOverlap: bubbleBoxes.some(b => projected.some(p => overlaps(b, p))),

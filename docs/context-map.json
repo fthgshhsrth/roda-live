@@ -1,0 +1,239 @@
+{
+  "kind": "static-esm-imports",
+  "nodes": [
+    {
+      "file": "launch-window.mjs",
+      "sha256": "0121199091c9f7ecd2304b4a1ab2baff789938c45c0f75f9115aa607c40d9928",
+      "exports": [],
+      "dependencies": [
+        "node:fs",
+        "node:path",
+        "node:url",
+        "node:child_process"
+      ]
+    },
+    {
+      "file": "media.js",
+      "sha256": "54f220548d06d72748afde994418380010f9d788f531fed52b8720087dc6fc63",
+      "exports": [
+        "videoURL",
+        "executable",
+        "downloadArgs",
+        "startDownload"
+      ],
+      "dependencies": [
+        "node:fs",
+        "node:path",
+        "node:child_process",
+        "node:string_decoder"
+      ]
+    },
+    {
+      "file": "music.js",
+      "sha256": "f77dce755408f8d3e5b5a39ee4c338816f4a7b64a188b5cffc8a155989a0bba6",
+      "exports": [
+        "activate",
+        "control"
+      ],
+      "dependencies": []
+    },
+    {
+      "file": "party.js",
+      "sha256": "02951033ac74f4da8a526d3a912def3cbc3eff55ae48906fcd3225e0e32bd104",
+      "exports": [
+        "rules",
+        "defaults",
+        "fresh",
+        "identity",
+        "giftPrice",
+        "matchGift",
+        "prune",
+        "removePerson",
+        "clearParty",
+        "gift",
+        "comment",
+        "settings",
+        "upgradeState"
+      ],
+      "dependencies": [
+        "public/party-layout.js"
+      ]
+    },
+    {
+      "file": "public/backstage.js",
+      "sha256": "7ab8dbbbce26a6ae9868bd051f26bc76518b583e172cfa779f972bca291b60dc",
+      "exports": [
+        "addBackstage"
+      ],
+      "dependencies": [
+        "three"
+      ]
+    },
+    {
+      "file": "public/camera-director.js",
+      "sha256": "dcf940fa3f836fa1afc7598a1522e254badf8b5cddcb65a36fc6b5ba1f8c4dbd",
+      "exports": [
+        "CAMERA_TIMING",
+        "CameraDirector",
+        "roseNotice"
+      ],
+      "dependencies": []
+    },
+    {
+      "file": "public/instruments.js",
+      "sha256": "5312b95a39bf6ce02e98733d93b21c12ff0373cd44fd25552af78fc478a85a3f",
+      "exports": [
+        "makeInstrument"
+      ],
+      "dependencies": [
+        "three"
+      ]
+    },
+    {
+      "file": "public/layout.js",
+      "sha256": "b1900e2f57d2a5ead0604a464c0637b1191bcd824b90a0265e55a462c31b32e6",
+      "exports": [
+        "overlaps",
+        "placeProjectedBubble"
+      ],
+      "dependencies": []
+    },
+    {
+      "file": "public/overlay.js",
+      "sha256": "4e47329f1952d5f39d42f8d69593f62b7006cfabfe0e64b4d408d99dee883678",
+      "exports": [],
+      "dependencies": [
+        "public/scene3d.js"
+      ]
+    },
+    {
+      "file": "public/panel.js",
+      "sha256": "31c522954317c5be63fadf6b9ae5c8a9205335e1830cbe340c65bfdb89dac07e",
+      "exports": [],
+      "dependencies": [
+        "public/party-layout.js"
+      ]
+    },
+    {
+      "file": "public/party-layout.js",
+      "sha256": "ba1b1126782812e8f54aa9f676afc34f897f27b15bbf139d12c747ba85754458",
+      "exports": [
+        "BAND",
+        "partyRole",
+        "sceneCast"
+      ],
+      "dependencies": []
+    },
+    {
+      "file": "public/roach.js",
+      "sha256": "cd2cdca6b6bb6a368dc9e370a51b3c15117e1165c7da251a7afde0040288fb99",
+      "exports": [
+        "characterSeed",
+        "makeRoach"
+      ],
+      "dependencies": [
+        "three",
+        "public/instruments.js"
+      ]
+    },
+    {
+      "file": "public/scene3d.js",
+      "sha256": "9b067ebb138cad733ba68cec7bf5e4c3f945f5bb7adcb3fc5e358d1846272e51",
+      "exports": [],
+      "dependencies": [
+        "three",
+        "public/roach.js",
+        "public/layout.js",
+        "public/camera-director.js",
+        "public/party-layout.js",
+        "public/backstage.js"
+      ]
+    },
+    {
+      "file": "qa-camera.mjs",
+      "sha256": "192e5d4483c88c4bfac60677a1782307b6e37238fcdd572cce8381088e7f7998",
+      "exports": [],
+      "dependencies": [
+        "qa-party.mjs"
+      ]
+    },
+    {
+      "file": "qa-party.mjs",
+      "sha256": "6b62fdcf4323641c005c045305170c5a9532ad1862f6cde25ff1328b930cfe21",
+      "exports": [],
+      "dependencies": [
+        "node:child_process",
+        "node:fs",
+        "node:path",
+        "node:assert/strict"
+      ]
+    },
+    {
+      "file": "qa-wedding.mjs",
+      "sha256": "192e5d4483c88c4bfac60677a1782307b6e37238fcdd572cce8381088e7f7998",
+      "exports": [],
+      "dependencies": [
+        "qa-party.mjs"
+      ]
+    },
+    {
+      "file": "qa.mjs",
+      "sha256": "192e5d4483c88c4bfac60677a1782307b6e37238fcdd572cce8381088e7f7998",
+      "exports": [],
+      "dependencies": [
+        "qa-party.mjs"
+      ]
+    },
+    {
+      "file": "scripts/context-map.mjs",
+      "sha256": "d466f5c7a1faa263c9cb3de285907fb2c33a530d8455b34ab4d9a688a1b6c726",
+      "exports": [],
+      "dependencies": [
+        "node:fs",
+        "node:path",
+        "node:url",
+        "node:crypto",
+        "node:assert/strict"
+      ]
+    },
+    {
+      "file": "server.js",
+      "sha256": "f2433bb3d806bc8e9320090b5ad9e821b846763f87325da7844827b49c0498b3",
+      "exports": [],
+      "dependencies": [
+        "node:http",
+        "node:fs",
+        "node:path",
+        "node:url",
+        "node:child_process",
+        "media.js",
+        "music.js",
+        "wheel.js",
+        "tiktok-live-connector"
+      ]
+    },
+    {
+      "file": "test.js",
+      "sha256": "07f822fdc85c617a5c40e0fc031adca43531d8a9ce4dd05eb97842e2e4bc6d1d",
+      "exports": [],
+      "dependencies": [
+        "node:test",
+        "node:assert/strict",
+        "wheel.js",
+        "public/party-layout.js",
+        "public/camera-director.js",
+        "public/layout.js",
+        "media.js",
+        "music.js"
+      ]
+    },
+    {
+      "file": "wheel.js",
+      "sha256": "2a4a8e1832fd12c17956443fe32757f20749713885b2c65c396696c8a3fcc9bf",
+      "exports": [],
+      "dependencies": [
+        "party.js"
+      ]
+    }
+  ]
+}

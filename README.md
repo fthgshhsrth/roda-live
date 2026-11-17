@@ -1,117 +1,96 @@
-# Baratas na Pista · Roda Live 3D 🪳
-Template local de live interativa para TikTok, com uma pista circular e baratas dançando em **3D real (Three.js / WebGL2)**.
+# Arraiá das Baratas · Roda Live 3D 🪳
+Uma festa interativa para TikTok: baratas humanoides com roupas e acessórios, casal no centro, banda de cinco músicos e DJ. Todos os modelos, instrumentos e movimentos são gerados em Three.js/WebGL2, sem CDN.
 
-<img src="docs/preview-vertical.png" width="400" alt="Pista 3D com baratas diferentes dançando e comentários acima dos personagens">
+<img src="docs/preview-vertical.png" width="420" alt="Festa 3D com banda, casal, DJ e balões dos doadores">
 
-## Versão 2
-- Pista 3D com iluminação, sombras, anéis luminosos e globo giratório.
-- Baratas com seis membros articulados, antenas, casco e olhos animados.
-- Características estáveis por participante: cores, tamanho, óculos, boné, fone, chapéu de festa, bigode e sapatos.
-- Passos de dança diferentes e reações a presentes.
-- A biblioteca foi substituída por um downloader: **link → yt-dlp → MP3 → reprodução automática na live**.
-- Janela sem barra de navegador, composição vertical/horizontal e modo leve.
+## Presentes e papéis
+| Ação | Presente configurado | Valor por unidade |
+| --- | --- | --- |
+| Entrar na roda | Rosa | 1 moeda |
+| Ser o noivo | Mãos fazendo coração / Heart Hands / Heart Me | Conforme o presente |
+| Ser a noiva | Rosa de 10 moedas | 10 moedas |
+| Integrar a banda | Rosquinha / Doughnut | 30 moedas |
+| Ser DJ | Boné / Cap | 99 moedas |
+| Acabar e reiniciar a festa | Serenata de arraiá | 2999 moedas |
 
-## Câmera automática
-A câmera alterna entre a visão geral da roda e closes de personagens aleatórios, com aproximação e afastamento suaves. Evita repetir o mesmo personagem em dois sorteios consecutivos.
+O valor é o de uma unidade do presente, não a soma do combo. Dez rosas comuns continuam sendo rosas comuns e não concedem a vaga de noiva.
 
-Quem envia rosas ganha prioridade sobre um close aleatório. O foco acompanha a barata enquanto ela dança. Na entrada, a câmera aproxima, a barata levanta a mão e dá um **tchauzinho para a câmera**, junto do aviso **“Nome entrou na roda!”**. Outra rosa de quem já participa renova o tempo e mostra o aviso de rosas.
+**Nomes e IDs podem variar no catálogo do TikTok.** No painel, conecte a live e clique em **Presentes da live** para selecionar os presentes corretos e salvar o mapa. Também é possível editar os nomes, IDs e moedas manualmente. O reinício exige o presente configurado e valor unitário de 2999; não é acionado apenas pelo valor gasto.
 
-Se várias pessoas enviarem rosas, os destaques priorizam os envios mais recentes, com um zoomout para mostrar a roda entre eles. Combos repetidos da mesma pessoa não prendem a câmera indefinidamente. Ao abrir a cena, avisos antigos não são repetidos.
+O conector recebe o valor unitário nos metadados do presente. Se esses dados estiverem ausentes e o nome for ambíguo, a ação não é aplicada. O catálogo depende de uma conexão TikTok real, que deve ser conferida antes de transmitir.
 
-Para verificar somente essa função, com o servidor iniciado e a sessão vazia/desconectada, execute **node qa-camera.mjs**. O teste usa Edge e limpa os participantes simulados ao terminar.
+## Como a festa funciona
+- A rosa coloca o doador na roda com seu nome e renova o tempo de permanência.
+- Noivo e noiva são disputados separadamente. Quem envia o presente ocupa o papel até outro doador substituí-lo.
+- A banda tem **sanfona, vitrola, bateria, gaita e saxofone**. Os cinco músicos ficam em um palco atrás da roda, ainda visível na visão geral.
+- As primeiras cinco rosquinhas de doadores diferentes ocupam as cinco posições. Depois, novos doadores substituem as posições em rodízio. Um mesmo doador não ocupa duas posições.
+- O boné coloca o doador no posto de DJ, com console e fones.
+- Cada pessoa ocupa um único papel. Ao assumir outro, libera o anterior. Um substituído retorna à roda se houver vaga; caso contrário, sai da cena.
+- Papéis especiais não expiram pelo tempo normal da roda. Os nomes aparecem em balões sobre os personagens.
+- A Serenata de 2999 reinicia participantes, casal, banda, DJ, contadores e áudio. Mantém o mapa de presentes, as configurações, a conexão e os arquivos de música locais. O nome de quem reiniciou aparece no aviso.
+
+A câmera faz closes suaves, prioriza papéis recém-assumidos e participantes recentes, e volta ao noivo periodicamente. A visão geral enquadra roda, palco e DJ. Na entrada por rosa, o personagem acena para a câmera. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.
+
+Os músicos animam os instrumentos e o DJ opera o console. O áudio da live vem do player/downloader; não são reproduzidas oito faixas de instrumentos simultaneamente.
 
 ## Executar
-Instale Node.js 22+ e execute:
+Instale Node.js 22+:
 
 ~~~sh
 npm ci
 npm start
 ~~~
 
-No Windows, INICIAR.bat inicia o servidor. Painel: http://localhost:3000
+Painel: http://localhost:3000
+Cena: http://localhost:3000/overlay.html
 
-Para abrir a cena em janela dedicada, execute **ABRIR-LIVE.bat** ou:
+No Windows, **INICIAR.bat** mantém o servidor no terminal. **ABRIR-LIVE.bat** inicia o servidor se necessário e abre a cena em uma janela dedicada de Edge/Chrome, sem barra de endereço.
 
-~~~sh
-npm run live
-~~~
-
-O iniciador abre Edge/Chrome em modo aplicativo, com áudio automático, e inicia o servidor se necessário. Não requer Git ou Python.
-
-## TikTok Live Studio: captura de janela
+## TikTok Live Studio
 1. Execute ABRIR-LIVE.bat.
-2. No TikTok Live Studio, adicione **Captura de janela**.
-3. Selecione **BARATAS NA PISTA**.
-4. Capture o áudio dessa janela ou a saída de áudio do computador.
-5. Ajuste o enquadramento da fonte.
+2. Adicione uma fonte de **Captura de janela**.
+3. Selecione a janela **BARATAS NA PISTA**.
+4. Capture o áudio da janela ou a saída do computador.
 
-A cena se adapta a janelas verticais e horizontais. A prévia do painel é silenciosa. Mantenha apenas uma cena emitindo áudio.
+A composição se adapta à janela vertical ou horizontal. A tecla F alterna tela cheia. Os controles desaparecem após dois segundos sem mover o mouse. O modo leve reduz a resolução e desliga sombras; mantenha a aceleração gráfica do navegador ativada.
 
-**F** alterna tela cheia. Os controles somem após dois segundos sem mover o mouse. **Qualidade: leve** desliga sombras e reduz a resolução. Ative a aceleração gráfica de Edge/Chrome.
+Alternativa: use a cena como fonte de navegador em 1080 × 1920 ou 1920 × 1080. A prévia do painel é silenciosa; mantenha apenas uma cena emitindo áudio.
 
-Alternativa: fonte de navegador em http://localhost:3000/overlay.html, com 1080 × 1920 ou 1920 × 1080. Transparência é indicada para fontes de navegador que a suportem; captura de janela usa o fundo da janela.
+## Música
+Instale yt-dlp, FFmpeg e ffprobe no PATH ou coloque os executáveis em tools/. INSTALAR-AUDIO.ps1 auxilia via winget no Windows.
 
-## Casamento no centro
-Há uma noiva fixa e um lugar de noivo no meio da roda. O presente **Anel / Ring** ocupa esse lugar, mesmo sem uma rosa anterior. Edite os nomes e IDs no mapa de presentes conforme sua região.
+Cole um link de vídeo compatível com yt-dlp e clique em **Baixar e tocar na live**. O servidor extrai MP3 para music/ e inicia automaticamente a faixa na cena. Há pausa, retomada, volume, posição e cancelamento.
 
-O noivo permanece no centro até outra pessoa enviar o presente de casamento. O anterior volta para a roda com o tempo renovado se houver vaga; se a roda estiver cheia, ele sai da cena. A vaga central é adicional à capacidade da roda. O operador também pode remover o noivo ou limpar a sessão no painel.
+Um vídeo por vez, sem playlists ou streams ao vivo, com limite de 1 GB e uma hora. Use conteúdo autorizado. Se a festa for reiniciada, o download em andamento é cancelado e não pode reativar o áudio da festa anterior.
 
-A câmera dá prioridade imediata ao novo noivo, enquadrando o casal. Nos outros closes, prioriza os participantes mais recentes e volta periodicamente ao noivo. Quem entra por rosa continua recebendo zoom, tchauzinho e aviso.
-
-Teste específico, com o servidor iniciado e a sessão vazia: **node qa-wedding.mjs**.
-
-## Presentes e comentários
-Digite o @ de uma conta ao vivo no painel. O conector é não oficial e depende do TikTok e do provedor de assinatura. Se exigida, defina EULER_API_KEY no ambiente antes de iniciar; arquivos .env não são lidos automaticamente.
-
-| Presente | Reação |
-| --- | --- |
-| Rosa | Entra com nome ou renova a permanência |
-| Coração | Corações flutuantes e aura rosa |
-| GG | Pulo |
-| Perfume | Brilho |
-| Galáxia | Brilho violeta e partículas |
-| Leão | Coroa |
-
-Nomes e IDs são editáveis. Combos são contabilizados no encerramento. Até 48 participantes em três anéis; rosas criam vagas na roda, e o Anel disputa a vaga central.
-
-Comentários usam a projeção da cena 3D para aparecer acima da cabeça, evitando corpos, nomes e outras bolhas. Se não houver espaço, podem expirar sem aparecer durante seus 7 segundos de exibição. O Laboratório permite testar tudo antes de conectar a live.
-
-## Downloader e autoplay
-Instale **yt-dlp, FFmpeg e ffprobe** no PATH ou coloque os executáveis em tools/. INSTALAR-AUDIO.ps1 auxilia a instalação via winget no Windows.
-
-Cole um link e clique em **Baixar e tocar na live**. Aceita sites compatíveis com yt-dlp, incluindo YouTube, TikTok, Vimeo e links diretos HTTP/HTTPS. O suporte depende do site e das regras de acesso; vídeos privados ou protegidos não têm reprodução garantida.
-
-O MP3 concluído vai para music/ e **substitui a faixa atual**, iniciando o áudio na cena. Mantenha a janela aberta. Uma fonte de navegador comum pode exigir o clique inicial em Ativar áudio; ABRIR-LIVE.bat habilita reprodução automática.
-
-Há pausa, retomada, parar, volume, posição e cancelamento. Não há biblioteca nem fila no painel. Os MP3 ficam no disco; nenhum áudio acompanha o projeto.
-
-Um vídeo por vez, sem playlists ou streams ao vivo, com limite de 1 GB e uma hora. O processo recebe argumentos separados, sem shell. Use conteúdo autorizado para transmissão e mantenha yt-dlp atualizado.
-
-## Estrutura
-| Arquivo | Função |
-| --- | --- |
-| server.js | HTTP local, SSE e TikTok |
-| media.js | yt-dlp, conversão, progresso e cancelamento |
-| music.js | Controle e sincronização da faixa |
-| public/scene3d.js | Cena, pista, câmera e projeção |
-| public/roach.js | Modelos, diferenças e dança |
-| public/overlay.css | Composição adaptável |
-| launch-window.mjs | Janela dedicada |
-| wheel.js | Presentes e participantes |
-
-Three.js é servido da instalação npm local, sem CDN. Configurações e sessão ficam em data/state.json; MP3 em music/. Dados locais, ferramentas e credenciais são ignorados pelo Git. O servidor escuta em 127.0.0.1; PORT altera a porta padrão 3000.
+## Conexão TikTok
+Digite o @ de uma conta ao vivo. O conector é não oficial e depende do TikTok e do provedor de assinatura. Se exigida, defina EULER_API_KEY no ambiente antes de iniciar; arquivos .env não são lidos automaticamente. Nunca publique credenciais.
 
 ## Verificação
 ~~~sh
 npm test
+node qa-party.mjs
 ~~~
 
-Os testes cobrem presentes, combos, permanência, comentários, URLs, autoplay e eventos antigos de áudio.
+Os testes de regras cobrem valores unitários, combos, papéis exclusivos, rodízio, substituições, limites, migração e reinício. A verificação visual usa Edge no Windows com WebGL2, testa os cinco instrumentos, casal, DJ, balões, troca de papéis e Serenata. Ela usa servidor e dados isolados na porta 3011, sem limpar a sessão de transmissão.
 
-Com Edge instalado no Windows e o servidor iniciado, node qa.mjs verifica WebGL2, animação, variações, comentários, janelas vertical/horizontal, download direto, conversão e reprodução automática. Requer sessão vazia e desconectada do TikTok; limpa os participantes simulados ao terminar. Capturas e relatório ficam em verificacao/, fora do repositório.
+As entradas antigas qa.mjs, qa-camera.mjs e qa-wedding.mjs encaminham ao teste atual. Resultados e capturas ficam em verificacao/, ignorados pelo Git. O teste não efetua compras nem envia presentes reais.
 
-A conexão com uma live real e a captura dentro do TikTok Live Studio exigem validação no computador de transmissão.
+A captura dentro do TikTok Live Studio e os IDs efetivos dos presentes exigem conferência no computador e na conta da transmissão.
 
-Projeto reconstruído a partir do grafo de arquitetura fornecido, que não incluía o código original.
+## Arquivos
+| Arquivo | Responsabilidade |
+| --- | --- |
+| party.js / wheel.js | Regras dos presentes e estado da festa |
+| public/party-layout.js | Papéis e distribuição do elenco |
+| public/roach.js | Baratas humanoides, roupas e movimentos |
+| public/instruments.js | Sanfona, vitrola, bateria, gaita, sax e console |
+| public/backstage.js | Palco da banda e área do DJ |
+| public/scene3d.js | Câmera, luzes, balões e overlay |
+| server.js / media.js / music.js | Servidor, downloader e áudio |
+
+O servidor escuta em 127.0.0.1. PORT altera a porta; dados ficam em data/state.json e MP3 em music/. Executáveis, dados locais, credenciais e testes visuais são ignorados pelo Git. A migração instala o novo mapa de seis presentes e mantém as outras preferências.
 
 [Three.js](https://threejs.org/) · [TikTok Live Connector](https://github.com/zerodytrash/TikTok-Live-Connector) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org/)
+## Desenvolvimento com menos contexto
+RTK, Ponytail, Headroom e o mapa de módulos estão documentados em [docs/tooling.md](docs/tooling.md).
