@@ -2,30 +2,30 @@ import {partyRole} from './public/party-layout.js';
 export {partyRole};
 export const rules=[
  {label:'Entrar · Rosa',icon:'🌹',names:'Rose,Rosa',ids:'5655',coins:1,effect:'join'},
- {label:'Noivo · Mãos coração',icon:'🫶',names:'Mãos fazendo coração,Mãos fazendo coração TikTok,Heart Hands,Heart Me',ids:'',coins:null,effect:'marry'},
+ {label:'Noivo · Mãos coração',icon:'🫶',names:'Mãos fazendo coração,Hand Heart,Heart Hands,Mãos em coração',ids:'',coins:null,effect:'marry'},
  {label:'Noiva · Rosa 10',icon:'👰',names:'Rosa,Rose,Rosa de 10,Rosa 10',ids:'',coins:10,effect:'bride'},
  {label:'Banda · Rosquinha',icon:'🍩',names:'Rosquinha,Doughnut,Donut,Doughnuts',ids:'',coins:30,effect:'band'},
  {label:'DJ · Boné',icon:'🧢',names:'Boné,Cap,Baseball Cap',ids:'',coins:99,effect:'dj'},
- {label:'Reiniciar · Serenata',icon:'🎆',names:'Serenata de arraia,Serenata de arraiá,Serenata de arraial,Arraia Serenade,Arraiá Serenade',ids:'',coins:2999,effect:'reset'}
+ {label:'Reiniciar · Serenata',icon:'🎆',names:'Serenata da Arraia,Serenata de arraia,Serenata de arraiá,Serenata de arraial,Arraia Serenade,Arraiá Serenade',ids:'',coins:2999,effect:'reset'}
 ];
 export const defaults={title:'A RODA É SUA',subtitle:'Mande uma rosa e entre na roda!',duration:15,speed:1,capacity:24,comments:true,transparent:false,rules};
 const emptyCouple=()=>({groomId:null,brideId:null,since:null});
 const emptyStage=()=>({djId:null,bandIds:[null,null,null,null,null],bandNext:0});
-export function fresh(){return {schemaVersion:4,partyEpoch:0,couple:emptyCouple(),stage:emptyStage(),
+export function fresh(){return {schemaVersion:5,partyEpoch:0,couple:emptyCouple(),stage:emptyStage(),
  settings:structuredClone(defaults),people:[],log:[],roses:0,seenGiftIds:[],
  music:{file:null,playing:false,position:0,volume:.65,changed:Date.now(),revision:0,duration:0,queue:[]}};}
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export function identity(e){const u=e.user||e;return {id:String(u.uniqueId||u.userId||'visitante').slice(0,100),name:String(u.nickname||u.uniqueId||'Visitante').slice(0,40)};}
 export function giftPrice(e){const value=e.diamondCount??e.giftDetails?.diamondCount??e.gift?.diamond_count;return value==null?null:Number(value);}
-export function matchGift(s,e){
+export function matchGift(s,e,ruleSet=s.settings.rules){
  const name=norm(e.giftName||e.giftDetails?.giftName),price=giftPrice(e);
- const byId=s.settings.rules.filter(r=>String(r.ids||'').split(',').some(id=>id.trim()&&id.trim()===String(e.giftId)));
- const byName=s.settings.rules.filter(r=>r.names.split(',').some(alias=>norm(alias)===name));
+ const byId=ruleSet.filter(r=>String(r.ids||'').split(',').some(id=>id.trim()&&id.trim()===String(e.giftId)));
+ const byName=ruleSet.filter(r=>!r.catalogBound&&r.names.split(',').some(alias=>norm(alias)===name));
  const candidates=byId.length?byId:byName;
  const matching=candidates.filter(r=>r.coins==null||price===Number(r.coins));
  if(matching.length===1)return matching[0];
  // A configured ID can identify ordinary roles without price metadata. Reset always requires 2999.
- if(price==null&&byId.length===1&&byId[0].effect!=='reset')return byId[0];
+ if(price==null&&byId.length===1&&byId[0].effect!=='reset'&&!byId[0].catalogBound)return byId[0];
  if(price==null&&candidates.length===1&&candidates[0].coins==null)return candidates[0];
  // Same names can represent different roses; filter by unit cost before ID fallback.
  if(price!=null&&byId.length&&!matching.length){const fallback=byName.filter(r=>r.coins==null||price===Number(r.coins));if(fallback.length===1)return fallback[0];}
@@ -43,9 +43,9 @@ function returnToFloor(s,id,now){
  p.expires=now+s.settings.duration*60000;
  if(s.people.filter(p=>!partyRole(s,p.id)).length>s.settings.capacity)s.people=s.people.filter(p=>p.id!==id);
 }
-export function gift(s,e,now=Date.now()){
+export function gift(s,e,now=Date.now(),ruleSet=s.settings.rules){
  if(Number(e.giftType??e.giftDetails?.giftType)===1&&!e.repeatEnd)return null;
- const rule=matchGift(s,e);if(!rule)return null;
+ const rule=matchGift(s,e,ruleSet);if(!rule)return null;
  const messageId=e.common?.msgId??e.msgId??e.eventId;
  s.seenGiftIds??=[];if(messageId&&s.seenGiftIds.includes(String(messageId)))return null;
  if(messageId){s.seenGiftIds.push(String(messageId));s.seenGiftIds=s.seenGiftIds.slice(-512);}
@@ -96,6 +96,12 @@ export function settings(input,current){
 export function upgradeState(s){
  s.couple={...emptyCouple(),...s.couple};s.stage={...emptyStage(),...s.stage};s.partyEpoch??=0;s.seenGiftIds??=[];
  if((s.schemaVersion||0)<4)s.settings.rules=structuredClone(rules);
+ if((s.schemaVersion||0)<5)s.settings.rules=s.settings.rules.map(r=>{
+  const stock=rules.find(d=>d.effect===r.effect);
+  if(r.effect==='marry'&&r.names.includes('Heart Hands')&&r.names.includes('Heart Me'))return {...r,names:stock.names};
+  if(r.effect==='reset'&&r.names.includes('Serenata de arraia')&&!r.names.includes('Serenata da Arraia'))return {...r,names:'Serenata da Arraia,'+r.names};
+  return r;
+ });
  for(const p of s.people)p.joinedAt??=p.lastGiftAt||0;
- s.schemaVersion=4;return s;
+ s.schemaVersion=5;return s;
 }

@@ -1,4 +1,5 @@
 import {partyRole} from './party-layout.js';
+import {giftActions} from './gift-catalog.js';
 const $=id=>document.getElementById(id);
 let state,settingsLoaded=false,rules=[],timer,catalog=[];
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(timer);timer=setTimeout(()=>$('toast').style.display='none',4500);}
@@ -14,7 +15,7 @@ function renderRules(){
   if(catalog.length){
    const picker=el('select');picker.append(el('option','Selecionar presente da live'));
    catalog.filter(g=>r.coins==null||g.coins===Number(r.coins)).forEach(g=>{const o=el('option',g.name+' · '+g.coins+' · ID '+g.id);o.value=g.id;picker.append(o);});
-   picker.onchange=()=>{const g=catalog.find(g=>g.id===picker.value);if(g){r.ids=g.id;r.names=g.name;renderRules();}};title.append(picker);
+   picker.onchange=()=>{const g=catalog.find(g=>g.id===picker.value);if(g){r.ids=g.id;r.names=g.name;r.coins=g.coins;renderRules();}};title.append(picker);
   }tr.append(title);
   for(const key of ['names','ids']){const td=el('td'),input=el('input');input.value=r[key];input.setAttribute('aria-label',key+' '+r.label);input.oninput=()=>rules[i][key]=input.value;td.append(input);tr.append(td);}
   const coinsCell=el('td'),coins=el('input');coins.type='number';coins.min='1';coins.placeholder='Qualquer';coins.value=r.coins??'';coins.setAttribute('aria-label','Moedas por unidade '+r.label);coins.oninput=()=>r.coins=coins.value===''?null:Number(coins.value);coinsCell.append(coins);tr.append(coinsCell);
@@ -24,6 +25,8 @@ function renderRules(){
 let peopleKey='',logKey='',jobKey='',giftKey='';
 function render(s){
  state=s;const ready=document.getElementById('audioStatus');if(ready){ready.textContent=s.audioReady?'● Downloader pronto · yt-dlp + FFmpeg':'○ Downloader precisa de yt-dlp + FFmpeg · veja INSTALAR-AUDIO.ps1';ready.style.color=s.audioReady?'#d6fb79':'#dab67a';}if(!settingsLoaded)loadSettings(s.settings);
+ const confirmed=(s.giftCatalog||[]).filter(g=>g.status==='verified').length;
+ $('catalogSummary').textContent=s.catalogStatus==='ready'?confirmed+'/6 presentes confirmados. '+(s.giftCatalog||[]).filter(g=>g.status!=='verified').map(g=>giftActions[g.effect]+': '+(g.status==='ambiguous'?'selecione o item':'presente indisponível')).join(' · '):s.catalogStatus==='loading'?'Carregando catálogo automaticamente…':s.catalogStatus==='error'?'Falha no catálogo. Clique em Presentes da live para tentar novamente.':'Conecte a live para confirmar nomes, imagens, IDs e moedas automaticamente.';
  $('status').textContent=s.status.message;$('statusLed').style.background=s.status.phase==='online'?'#d6fb79':s.status.phase==='error'?'#ff8484':'#899578';
  $('peopleCount').replaceChildren(document.createTextNode(s.people.length+' '),el('small','participantes'));$('roseCount').replaceChildren(document.createTextNode(s.roses+' '),el('small','nesta sessão'));$('audioMetric').replaceChildren(document.createTextNode(s.music.playing?'Tocando ':'Pronto '),el('small',s.music.playing?'áudio ativo na cena':'baixar, converter e tocar'));
  const gk=JSON.stringify(s.settings.rules);if(gk!==giftKey){giftKey=gk;$('giftButtons').replaceChildren(...s.settings.rules.map(r=>button(r.icon+' '+r.label,()=>api('simulate',{user:$('testUser').value.trim()||'Visitante',giftName:r.names.split(',')[0],giftId:r.ids.split(',')[0],coins:r.coins,count:1}))));}
@@ -53,4 +56,9 @@ $('cancelDownload').onclick=action(()=>api('download/cancel'));
 $('loadCatalog').onclick=action(async()=>{
  const r=await fetch('/api/gifts'),j=await r.json();if(!r.ok)throw Error(j.error);
  catalog=j.gifts;renderRules();toast('Catálogo carregado. Selecione os presentes e salve o mapa.');
+});
+for(const [id,orientation] of [['copyPortrait','portrait'],['copyLandscape','landscape']])$(id).onclick=action(async()=>{
+ const url=location.origin+'/overlay.html?studio=1&format='+orientation+'#tiktok.studio';
+ try{await navigator.clipboard.writeText(url);toast('Link copiado. Fonte Link: '+(orientation==='portrait'?'1080 × 1920':'1920 × 1080')+'.');}
+ catch{window.prompt('Copie o link da fonte:',url);}
 });

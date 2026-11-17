@@ -4,6 +4,8 @@ import {overlaps, placeProjectedBubble} from './layout.js';
 import {CameraDirector, roseNotice} from './camera-director.js';
 import {sceneCast} from './party-layout.js';
 import {addBackstage} from './backstage.js';
+import {captureProfile} from './capture-profile.js';
+import {renderGiftCatalog} from './gift-catalog.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
@@ -11,7 +13,7 @@ document.body.classList.toggle('preview', preview);
 let state = {settings: {speed: 1, comments: true}, people: [], music: {}, log: []};
 let offset = 0, elapsed = 0, frame = 0, lastTick = performance.now(), lastRender = 0;
 let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0,resetUntil=0;
-$('quality').textContent = high ? 'Qualidade: alta' : 'Qualidade: leve';
+$('quality').textContent = high ? 'Qualidade: Full HD' : 'Qualidade: leve';
 const audio = $('audio'), channel = new BroadcastChannel('roda-live-audio');
 const ownerId = crypto.randomUUID(); let audioOwner = false, audioKey = '', metadataKey = '';
 let audioContext, analyser, frequency;
@@ -77,7 +79,7 @@ const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0,
 const cameraAim = overviewAim.clone(), desiredCamera = new THREE.Vector3(), desiredAim = new THREE.Vector3();
 let cameraInitialized = false, shot = director.update(performance.now(), []), shownShot = -1;
 scene.add(new THREE.HemisphereLight('#e4c3ff', '#24132b', 2.3));
-const keyLight = new THREE.DirectionalLight('#ffe3bb', 4); keyLight.position.set(-6, 12, 10);
+const keyLight = new THREE.DirectionalLight('#ffe3bb', 4.5); keyLight.position.set(-6, 12, 10);
 keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024);
 Object.assign(keyLight.shadow.camera, {left: -10, right: 10, top: 10, bottom: -10, near: .5, far: 40});
 keyLight.shadow.normalBias = .04; scene.add(keyLight);
@@ -118,8 +120,10 @@ addBackstage(scene);
 let viewport = {width: 1, height: 1, top: 0, left: 0};
 function resize() {
   const bounds = $('viewport').getBoundingClientRect(); viewport = bounds;
-  const ratio = Math.min(devicePixelRatio || 1, high && !preview ? 2 : 1, 2400 / Math.max(bounds.width, bounds.height));
-  renderer.setPixelRatio(ratio); renderer.setSize(bounds.width, bounds.height, false);
+  const profile = captureProfile(bounds.width,bounds.height,{high,preview,dpr:devicePixelRatio||1});
+  renderer.setPixelRatio(profile.ratio); renderer.setSize(bounds.width, bounds.height, false);
+  keyLight.shadow.mapSize.set(profile.shadowSize,profile.shadowSize);
+  if(keyLight.shadow.map){keyLight.shadow.map.dispose();keyLight.shadow.map=null;}
   camera.aspect = bounds.width / bounds.height;
   const distance = Math.max(31, 28 / camera.aspect);
   overviewPosition.set(1, distance * .64, distance * .83-2.5);
@@ -128,7 +132,7 @@ function resize() {
 }
 new ResizeObserver(resize).observe($('viewport'));
 $('quality').onclick = () => { high = !high; renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
-  $('quality').textContent = high ? 'Qualidade: alta' : 'Qualidade: leve'; resize(); };
+  $('quality').textContent = high ? 'Qualidade: Full HD' : 'Qualidade: leve'; resize(); };
 const characters = new Map();
 function reconcile(people) {
   const ids = new Set(people.map(p => p.id));
@@ -152,11 +156,11 @@ function reconcile(people) {
   renderer.shadowMap.enabled = high && !preview && characters.size <= 18;
 }
 const demo = Array.from({length: 8}, (_, i) => ({id: 'roach-demo-' + i, name: ['DJ Casquinha', 'Dona Antena', 'MC Crocante', 'Brilhosa', 'Seu Bigode', 'Patinhas', 'Zé do Passinho', 'Rainha da Pista'][i], demo: true}));
-const seenEvents = new Set(); let receivedSnapshot = false;
+const seenEvents = new Set(); let receivedSnapshot = false,catalogKey='';
 function showEventToast(message, entry = false) {
   $('eventToast').textContent = message;
   $('eventToast').classList.toggle('entry-notice', entry);
-  toastUntil = Date.now() + 5000;
+  toastUntil = Date.now() + 3500;
   if (entry) toastProtectedUntil = Date.now() + 3000;
 }
 function updateState(next) {
@@ -166,10 +170,14 @@ function updateState(next) {
   state = next; offset = next.serverTime - Date.now(); $('offline').hidden = true;
   document.body.classList.toggle('transparent', !!next.settings.transparent);
   const defaultTitle = !next.settings.title || next.settings.title === 'A RODA É SUA';
-  if (defaultTitle) $('sceneTitle').innerHTML = 'BARATAS <br>NA PISTA<span>!</span>'; else $('sceneTitle').textContent = next.settings.title;
+  $('sceneTitle').textContent = defaultTitle ? 'ARRAIÁ DAS BARATAS' : next.settings.title;
   $('sceneSubtitle').textContent = next.settings.subtitle === 'Mande uma rosa e entre na roda!' ? 'Uma rosa. Uma barata. Um show à parte.' : next.settings.subtitle;
   $('count').textContent = next.people.length;
-  $('demoHint').hidden = next.people.length > 0;
+  const key=JSON.stringify(next.giftCatalog||[]);
+  if(key!==catalogKey){catalogKey=key;renderGiftCatalog($('giftCatalog'),next.giftCatalog||[]);}
+  const verified=(next.giftCatalog||[]).filter(g=>g.status==='verified').length;
+  $('catalogStatus').textContent=next.catalogStatus==='ready'?(verified===6?'Presentes confirmados na live':verified+'/6 confirmados · veja o painel'):
+    next.catalogStatus==='loading'?'Consultando presentes…':next.catalogStatus==='error'?'Catálogo indisponível · veja o painel':'Prévia · confirme ao conectar';
   $('nowTrack').hidden = !next.music.playing || !next.track;
   $('trackLabel').textContent = next.track?.title || '';
   reconcile(sceneCast(next,preview?demo:[]));
@@ -224,34 +232,38 @@ function moveCamera(time, dt, entries) {
 }
 let projected = [], bubbleBoxes = [];
 function labelLayout(entries, now) {
-  const w = innerWidth, h = innerHeight, obstacles = [], active = [];
+  const w = innerWidth, h = innerHeight, obstacles = [], active = [],visibleEntries=[];
+  const footer=$('giftCatalog').getBoundingClientRect(),header=$('sceneTitle').getBoundingClientRect();
+  const bounds={width:w,minY:header.bottom+16,maxY:footer.top-30};
+  if(Date.now()<toastUntil){const r=$('eventToast').getBoundingClientRect();obstacles.push({x:r.x-4,y:r.y-4,w:r.width+8,h:r.height+8});}
   for (const entry of entries) {
     const root = entry.model.root, scale = root.scale.x;
     const head = project(root.position.x,root.position.y+3.5 * scale + entry.model.dancer.position.y, root.position.z);
     const feet = project(root.position.x,root.position.y,root.position.z);
     entry.bubble.hidden = true; entry.line.style.display = 'none';
     const visible = head.visible && feet.visible && feet.x > -100 && feet.x < w + 100 && feet.y > 0 && head.y < h;
-    entry.name.hidden = !visible;
+    entry.name.hidden = true;
     if (!visible) continue;
     const left = project(root.position.x - 1.1 * scale,root.position.y+1.3, root.position.z);
     const right = project(root.position.x + 1.1 * scale,root.position.y+1.3, root.position.z);
     const body = {x: left.x - 5, y: head.y - 5, w: right.x - left.x + 10, h: feet.y - head.y + 32};
     obstacles.push(body); entry.anchor = {x: head.x, y: head.y};
-    entry.name.style.left = feet.x + 'px'; entry.name.style.top = (entry.person.donor?head.y:feet.y+5)+'px';
-    entry.name.style.zIndex = Math.round(feet.y);
-    const nameRect = entry.name.getBoundingClientRect();
-    obstacles.push({x: nameRect.x - 3, y: nameRect.y - 3, w: nameRect.width + 6, h: nameRect.height + 6});
-    entry.bubble.hidden = true; entry.line.style.display = 'none';
+    visibleEntries.push(entry);
     if (state.settings.comments && entry.person.commentUntil > now && entry.person.comment) active.push(entry);
   }
-  const placed = [], hud = $('sceneTitle').getBoundingClientRect();
-  const minY = Math.max(hud.bottom + 26, h * .24), maxY = h * .77;
-  for (const entry of active.sort((a, b) => b.person.commentUntil - a.person.commentUntil)) {
-    const bubble = entry.bubble; bubble.textContent = entry.person.comment;
+  const placed = [],featured=visibleEntries.find(e=>shot.mode==='focus'&&e.person.id===shot.targetId&&e.person.donor);
+  if(featured&&!active.includes(featured)){
+    const name=featured.name;name.hidden=false;
+    const box=placeProjectedBubble(featured.anchor,name.offsetWidth,name.offsetHeight,obstacles,[],bounds);
+    if(box){name.style.left=box.x+'px';name.style.top=box.y+'px';name.style.zIndex='1900';obstacles.push(box);}else name.hidden=true;
+  }
+  for (const entry of active.sort((a, b) => b.person.commentUntil - a.person.commentUntil).slice(0,2)) {
+    const bubble = entry.bubble,author=document.createElement('strong');author.textContent=entry.person.name;
+    bubble.replaceChildren(author,document.createTextNode(entry.person.comment));
     const width = Math.min(preview ? 125 : Math.max(150, w * .24), w * .65, 320);
     bubble.style.width = width + 'px'; bubble.hidden = false;
     const height = bubble.offsetHeight;
-    const box = placeProjectedBubble(entry.anchor, width, height, obstacles, placed, {width: w, minY, maxY});
+    const box = placeProjectedBubble(entry.anchor, width, height, obstacles, placed, bounds);
     if (!box) { bubble.hidden = true; continue; }
     bubble.style.left = box.x + 'px'; bubble.style.top = box.y + 'px'; bubble.style.zIndex = '2000';
     placed.push({...box, x: box.x - 4, y: box.y - 4, w: box.w + 8, h: box.h + 8});
@@ -263,7 +275,7 @@ function labelLayout(entries, now) {
 }
 function draw(time) {
   requestAnimationFrame(draw);
-  if (time - lastRender < 1000 / (preview || !high ? 30 : 60)) return;
+  if (time - lastRender < 1000 / (preview ? 24 : high ? 60 : 30)-.5) return;
   const dt = Math.min(.08, (time - lastTick) / 1000); lastTick = time; lastRender = time;
   elapsed += dt * (state.settings.speed ?? 1); frame++;
   let beat = state.music.playing ? Math.max(0, Math.sin(elapsed * 7)) * .25 : .05;
@@ -296,9 +308,11 @@ function draw(time) {
   $('finale').hidden=Date.now()>=resetUntil;document.body.classList.toggle('party-reset',Date.now()<resetUntil);
 }
 window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls,
+  renderWidth:renderer.domElement.width,renderHeight:renderer.domElement.height,
+  visibleNames:[...characters.values()].filter(e=>!e.name.hidden).length,
   characters: characters.size, obstacles: projected, bubbles: bubbleBoxes, bubbleOverlap: bubbleBoxes.some(b => projected.some(p => overlaps(b, p))),
   camera: {mode: shot.mode, reason: shot.reason, targetId: shot.targetId, token: shot.token,
     position: camera.position.toArray(), aim: cameraAim.toArray(), distance: camera.position.distanceTo(cameraAim),
     greeting: characters.get(shot.targetId)?.model.isGreeting || false}})};
 $('scene').addEventListener('webglcontextlost', e => { e.preventDefault(); $('boot').hidden = false; $('boot').textContent = 'A GPU interrompeu a cena. Reabra a janela ou use o modo leve.'; });
-reconcile(demo); resize(); $('boot').hidden = true; requestAnimationFrame(draw);
+reconcile(preview?demo:[]); resize(); $('boot').hidden = true; requestAnimationFrame(draw);

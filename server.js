@@ -6,6 +6,7 @@ import {spawn} from 'node:child_process';
 import {startDownload, executable as toolPath} from './media.js';
 import {activate, control} from './music.js';
 import {fresh,defaults,gift,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
+import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=process.env.RODA_DATA_DIR?path.resolve(process.env.RODA_DATA_DIR):path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
 const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.schemaVersion=saved.schemaVersion||0;state.music.playing=false;}catch{}
@@ -13,25 +14,42 @@ upgradeState(state);
 let audioReady=false, activeDownload=null;
 state.music.queue=[];state.music.revision=state.music.revision||0;state.music.duration=state.music.duration||0;
 const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'Modo local · simulador disponível'},jobs=[];
+let availableGifts=[],catalogStatus='offline';
+const giftCatalog=()=>resolveGiftCatalog(state.settings.rules,availableGifts,catalogStatus);
+async function loadGiftCatalog(conn=live,ticket=epoch){
+ if(!conn)throw Error('Conecte uma live para carregar os presentes disponíveis.');
+ catalogStatus='loading';send();
+ try{
+  const gifts=sanitizeGifts(conn.availableGifts?.length?conn.availableGifts:await conn.fetchAvailableGifts());
+  if(conn!==live||ticket!==epoch)throw Error('A conexão mudou. Carregue o catálogo novamente.');
+  if(!gifts.length)throw Error('O catálogo retornou vazio. Tente novamente.');
+  availableGifts=gifts;catalogStatus='ready';send();return gifts;
+ }catch(e){if(conn===live&&ticket===epoch){catalogStatus='error';availableGifts=[];send();}throw e;}
+}
 function save(){fs.writeFileSync(stateFile,JSON.stringify(state,null,2));}
 function currentTrack(){const file=state.music.file;return file?{file,title:file.replace(/\s*\[[^\]]+\]\.mp3$/,'').replace(/\.mp3$/,''),url:'/music/'+encodeURIComponent(file)}:null;}
-function snapshot(){prune(state);return {...state,status,jobs,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
+function snapshot(){prune(state);return {...state,status,jobs,giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
 function send(){const data='data: '+JSON.stringify(snapshot())+'\n\n';for(const res of clients)res.write(data);}
 function musicPosition(){return state.music.position+(state.music.playing?(Date.now()-state.music.changed)/1000:0);}
 function setStatus(phase,message){status={phase,message};send();}
-function disconnect(){epoch++;const old=live;live=null;try{old?.disconnect();}catch{}setStatus('offline','Desconectado · simulador disponível');}
+function disconnect(){epoch++;const old=live;live=null;availableGifts=[];catalogStatus='offline';try{old?.disconnect();}catch{}setStatus('offline','Desconectado · simulador disponível');}
 async function connect(username){
  disconnect();const ticket=epoch;setStatus('connecting','Conectando a @'+username);
  try{
  const mod=await import('tiktok-live-connector');if(ticket!==epoch)return;
  const Connection=mod.TikTokLiveConnection||mod.WebcastPushConnection;
  const conn=new Connection(username,{enableExtendedGiftInfo:true,processInitialData:false,...(process.env.EULER_API_KEY?{signApiKey:process.env.EULER_API_KEY}:{})});live=conn;
- conn.on('gift',e=>{if(ticket!==epoch)return;const ev=gift(state,{...e,giftName:e.giftName||e.giftDetails?.giftName||e.gift?.name});if(ev){if(ev.effect==='reset')activeDownload?.cancel();save();send();}});
+ conn.on('gift',e=>{if(ticket!==epoch)return;
+  const known=availableGifts.find(g=>g.id===String(e.giftId));
+  const ev=gift(state,{...e,diamondCount:e.diamondCount??e.giftDetails?.diamondCount??known?.coins,
+   giftName:e.giftName||e.giftDetails?.giftName||e.gift?.name},Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
+  if(ev){if(ev.effect==='reset')activeDownload?.cancel();save();send();}});
  conn.on('chat',e=>{if(ticket===epoch&&comment(state,e))send();});
  conn.on('error',()=>{if(ticket===epoch)setStatus('error','Erro de conexão. Verifique a live e o provedor de assinatura.');});
  conn.on('disconnected',()=>{if(ticket===epoch)setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');});
  conn.on('streamEnd',()=>{if(ticket===epoch)disconnect();});
  await conn.connect();if(ticket!==epoch){conn.disconnect();return;}setStatus('online','Ao vivo com @'+username);
+ try{await loadGiftCatalog(conn,ticket);}catch{ /* The panel exposes a retry; metadata-based matching remains available. */ }
  }catch(e){if(ticket===epoch)setStatus('error','Não foi possível conectar: '+String(e.message).slice(0,180));}
 }
 function tool(name){return toolPath(ROOT,name);}
@@ -69,9 +87,8 @@ const server=http.createServer(async(req,res)=>{
  if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Método inválido'});return;}
  if(url.pathname==='/api/state'){json(res,200,snapshot());return;}
  if(url.pathname==='/api/gifts'){
-  if(!live)throw Error('Conecte uma live para carregar os presentes disponíveis.');
-  const catalog=await live.fetchAvailableGifts();
-  json(res,200,{gifts:catalog.map(g=>({id:String(g.id),name:g.name,coins:Number(g.diamond_count??g.diamondCount)}))});return;
+  const gifts=catalogStatus==='ready'?availableGifts:await loadGiftCatalog();
+  json(res,200,{gifts,mapped:giftCatalog()});return;
  }
  if(url.pathname==='/events'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});res.write('data: '+JSON.stringify(snapshot())+'\n\n');clients.add(res);req.on('close',()=>clients.delete(res));return;}
  if(['/vendor/three/three.module.js','/vendor/three/three.core.js'].includes(url.pathname)){

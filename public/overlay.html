@@ -1,18 +1,17 @@
 <!doctype html>
 <html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#100e19"><title>BARATAS NA PISTA · Roda Live 3D</title>
+<meta name="theme-color" content="#100e19"><title>BARATAS NA PISTA · LIVE 1080p</title>
 <link rel="stylesheet" href="/overlay.css"></head><body>
-<div id="backdrop"></div><div id="viewport"><canvas id="scene" aria-label="Roda de baratas dançando em 3D"></canvas></div>
+<div id="backdrop"></div><div id="viewport"><canvas id="scene" aria-label="Festa de baratas dançando em 3D"></canvas></div>
 <svg id="connectors" aria-hidden="true"></svg><div id="labels"></div>
-<header class="live-header"><div class="studio-mark"><span class="live-pulse"></span> RODA LIVE <span class="badge-3d">3D</span></div>
-<div class="overline">A PISTA MAIS ANIMADA DA LIVE</div><h1 id="sceneTitle">BARATAS<br>NA PISTA<span>!</span></h1>
-<p id="sceneSubtitle">Uma rosa. Uma barata. Um show à parte.</p></header>
-<div class="scene-count"><span>✦</span> <strong id="count">0</strong> NA FESTA</div>
-<div id="finale" hidden><strong>🎆 NOVA FESTA!</strong><span id="finaleName"></span><small>Os papéis estão disponíveis de novo.</small></div><div id="demoHint">PRÉVIA DA PISTA · MANDE UMA ROSA PARA ENTRAR</div><div id="eventToast" aria-live="polite"></div>
-<footer class="live-footer"><div id="nowTrack" hidden><span class="equalizer"><i></i><i></i><i></i><i></i></span><span id="trackLabel"></span></div>
-<div class="gift-legend"><span>🌹 Festa · 1 rosa</span><span>🫶 Noivo</span><span>👰 Noiva · 10</span><span>🍩 Banda · 30</span><span>🧢 DJ · 99</span><span>🎆 Reinício · 2999</span></div><div class="rose-call"><span>🌹</span><div><strong>MANDE UMA ROSA</strong><small>E ganhe sua barata na roda.</small></div><span class="call-arrow">↗</span></div></footer>
-<div id="windowTools"><button id="enable">♫ Ativar áudio</button><button id="fullscreen">⛶ Tela cheia</button><button id="quality">Qualidade: alta</button></div>
+<header class="live-header"><h1 id="sceneTitle">ARRAIÁ DAS BARATAS</h1><span class="scene-count"><strong id="count">0</strong> na festa</span><p id="sceneSubtitle" hidden></p></header>
+<div id="finale" hidden><strong>🎆 NOVA FESTA!</strong><span id="finaleName"></span><small>Todos os papéis estão livres de novo.</small></div>
+<div id="demoHint" hidden></div><div id="eventToast" aria-live="polite"></div>
+<footer class="live-footer"><div class="catalog-heading"><span>ESCOLHA SEU PAPEL</span><small id="catalogStatus">Prévia · confirme os presentes ao conectar</small></div>
+<div id="giftCatalog" class="gift-catalog" aria-label="Presentes e ações da festa"></div>
+<div id="nowTrack" hidden><span class="equalizer"><i></i><i></i><i></i></span><span id="trackLabel"></span></div></footer>
+<div id="windowTools"><button id="enable">♫ Ativar áudio</button><button id="fullscreen">⛶ Tela cheia</button><button id="quality">Qualidade: Full HD</button></div>
 <div id="offline" hidden>Reconectando ao painel…</div><div id="boot" role="status">Acendendo a pista 3D…</div><audio id="audio" preload="auto"></audio>
 <script>window.addEventListener('error',function(e){var b=document.getElementById('boot');b.hidden=false;b.textContent='Não foi possível abrir a cena 3D. Confira as dependências e a aceleração gráfica. '+(e.message||'');});</script>
 <script type="module" src="/overlay.js"></script></body></html>

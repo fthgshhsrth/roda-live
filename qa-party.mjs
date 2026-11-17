@@ -24,9 +24,10 @@ try{
  cdp=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}));setTimeout(()=>{if(pending.has(n)){pending.delete(n);reject(Error('CDP timeout: '+method));}},30000).unref();});
  const evaluate=async expression=>{const r=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
  async function until(expression,timeout=20000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await sleep(100);}throw Error('Não confirmado: '+expression);}
- await cdp('Runtime.enable');await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:720,height:1280,deviceScaleFactor:1,mobile:false});
+ await cdp('Runtime.enable');await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:1080,height:1920,deviceScaleFactor:1,mobile:false});
  await cdp('Page.navigate',{url:'http://localhost:3011/overlay.html?quality=low'});
  await until('window.roda3D?.diagnostics().frames>2',40000);
+ assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='band').length"),5);
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.stageRole==='dj').length"),1);
  const give=(user,giftName,coins)=>api('simulate',{user,giftName,coins});
@@ -40,9 +41,18 @@ try{
  assert.equal(await evaluate("window.roda3D.characters.get('Noiva').model.weddingRole"),'bride');
  assert.equal(await evaluate("window.roda3D.characters.get('Noivo').model.weddingRole"),'groom');
  assert.equal(await evaluate("document.querySelectorAll('.donor-name').length"),9);
+ assert.ok(await evaluate('window.roda3D.diagnostics().visibleNames<=1'));
  await until("window.roda3D.diagnostics().camera.mode==='overview'&&window.roda3D.diagnostics().camera.distance>30",18000);
+ await cdp('Page.reload');await until('window.roda3D?.diagnostics().frames>1',40000);
  fs.mkdirSync(path.join(root,'verificacao'),{recursive:true});
  const image=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(root,'verificacao/festa-banda.png'),Buffer.from(image.data,'base64'));
+ await api('simulate',{kind:'comment',user:'Visitante',comment:'Agora a festa está muito mais limpa!'});
+ await until("window.roda3D.diagnostics().bubbles.length>0");
+ assert.equal(await evaluate('window.roda3D.diagnostics().bubbleOverlap'),false);
+ await cdp('Emulation.setDeviceMetricsOverride',{width:1920,height:1080,deviceScaleFactor:1,mobile:false});
+ await sleep(500);
+ assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
+ const horizontal=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(root,'verificacao/overlay-horizontal.png'),Buffer.from(horizontal.data,'base64'));
  await give('Novo músico','Donut',30);await until("window.roda3D.characters.get('Novo músico')?.model.instrument==='accordion'");
  assert.equal(await evaluate("window.roda3D.characters.get('Sanfoneiro').person.stageResident||false"),false);
  await give('Novo DJ','Cap',99);await until("window.roda3D.characters.get('Novo DJ')?.model.instrument==='dj'");
@@ -51,7 +61,7 @@ try{
  const clean=await snapshot();assert.equal(clean.people.length,0);assert.ok(clean.stage.bandIds.every(id=>id===null));assert.equal(clean.stage.djId,null);assert.equal(clean.couple.brideId,null);assert.equal(clean.couple.groomId,null);assert.equal(clean.music.playing,false);
  await until("document.querySelectorAll('.donor-name').length===0");
  assert.equal(errors.length,0,errors.join('\n'));
- const report={band5:'PASS',instruments:'PASS',dj:'PASS',couple:'PASS',donorBalloons:'PASS',roleReplacement:'PASS',reset2999:'PASS',javascriptErrors:errors.length};
+ const report={band5:'PASS',instruments:'PASS',dj:'PASS',couple:'PASS',cleanNames:'PASS',catalog6:'PASS',portrait1080:'PASS',landscape1920:'PASS',commentsNoOverlap:'PASS',roleReplacement:'PASS',reset2999:'PASS',javascriptErrors:errors.length};
  fs.writeFileSync(path.join(root,'verificacao/resultado-festa.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }catch(e){console.error(e);process.exitCode=1;}
 finally{if(ws?.readyState===1)ws.send(JSON.stringify({id:999999,method:'Browser.close'}));await api('clear',{});await sleep(100);ws?.close();browser.kill();server.kill();}

@@ -6,6 +6,8 @@ import {CameraDirector} from './public/camera-director.js';
 import {placeProjectedBubble,overlaps} from './public/layout.js';
 import {videoURL,downloadArgs} from './media.js';
 import {activate,control} from './music.js';
+import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
+import {captureProfile} from './public/capture-profile.js';
 const send=(s,id,name,coins,now=100,extra={})=>gift(s,{uniqueId:id,nickname:id,giftName:name,diamondCount:coins,...extra},now);
 test('rosa unitária entra; combo de dez rosas não vira noiva',()=>{
  const s=fresh();send(s,'Ana','Rose',1);send(s,'Ana','Rose',1,200,{repeatCount:10});
@@ -17,7 +19,8 @@ test('rosa de dez moedas escolhe noiva sem colidir com rosa comum',()=>{
 });
 test('noivo usa mãos coração; o Anel antigo não concede papel',()=>{
  const s=fresh();send(s,'A','Mãos fazendo coração',null);assert.equal(s.couple.groomId,'A');
- assert.equal(send(s,'B','Anel',30),null);send(s,'B','Heart Me',1,200);assert.equal(s.couple.groomId,'B');assert.equal(partyRole(s,'A'),null);
+ assert.equal(send(s,'B','Anel',30),null);assert.equal(send(s,'B','Heart Me',1,200),null);
+ send(s,'B','Hand Heart',100,300);assert.equal(s.couple.groomId,'B');assert.equal(partyRole(s,'A'),null);
 });
 test('cada doador tem um papel; noiva e noivo são disputados separadamente',()=>{
  const s=fresh();send(s,'A','Heart Hands',null);send(s,'B','Rosa',10);
@@ -91,4 +94,32 @@ test('áudio protege contra eventos atrasados e controles inválidos',()=>{
  const m=fresh().music;activate(m,'a.mp3',100);const old=m.revision;activate(m,'b.mp3',200);
  control(m,{action:'ended',file:'a.mp3',revision:old},300);assert.equal(m.playing,true);
  control(m,{action:'pause'},400);const before=structuredClone(m);assert.throws(()=>control(m,{action:'volume',value:'x'},500));assert.deepEqual(m,before);
+});
+test('catálogo liga nome, imagem, ID e preço reais; não adivinha presentes pelo valor',()=>{
+ const s=fresh(),gifts=sanitizeGifts([
+  {id:5655,name:'Rose',diamond_count:1,image:{url_list:['https://example.com/rose.png']}},
+  {id:400,name:'Heart Me',diamond_count:1},{id:401,name:'Hand Heart',diamond_count:100},
+  {id:402,name:'Outro presente',diamond_count:10},{id:403,name:'Doughnut',diamond_count:30},
+  {id:404,name:'Cap',diamond_count:99},{id:405,name:'Serenata da Arraia',diamond_count:2999},
+  {id:406,name:'Inválido',diamond_count:30,image:'javascript:bad'}
+ ]);
+ const cards=resolveGiftCatalog(s.settings.rules,gifts,'ready'),bound=catalogRules(s.settings.rules,cards);
+ assert.equal(cards.find(g=>g.effect==='marry').id,'401');assert.equal(cards.find(g=>g.effect==='bride').status,'unavailable');
+ assert.equal(cards.find(g=>g.effect==='reset').name,'Serenata da Arraia');assert.equal(gifts.at(-1).image,'');
+ assert.equal(gift(s,{uniqueId:'A',giftId:401,giftName:'nome localizado',diamondCount:100},100,bound)?.effect,'marry');
+ assert.equal(gift(s,{uniqueId:'B',giftId:400,giftName:'Hand Heart',diamondCount:100},200,bound),null);
+ assert.equal(gift(s,{uniqueId:'B',giftId:401,giftName:'Hand Heart',diamondCount:1},200,bound),null);
+ assert.equal(cards[0].image,'https://example.com/rose.png');
+});
+test('catálogo ambíguo exige seleção por ID; offline não afirma confirmação',()=>{
+ const s=fresh(),gifts=[{id:'1',name:'Rose',coins:1},{id:'2',name:'Rose',coins:1}];s.settings.rules[0].ids='';
+ assert.equal(resolveGiftCatalog(s.settings.rules,gifts,'ready')[0].status,'ambiguous');
+ s.settings.rules[0].ids='2';assert.equal(resolveGiftCatalog(s.settings.rules,gifts,'ready')[0].id,'2');
+ assert.equal(resolveGiftCatalog(s.settings.rules,gifts,'offline')[0].status,'pending');
+});
+test('renderização prepara Full HD sem depender do DPI do monitor e limita buffers grandes',()=>{
+ assert.equal(captureProfile(720,960).ratio,1.5);assert.equal(captureProfile(1080,1382).ratio,1);
+ assert.equal(captureProfile(1280,720).ratio,1.5);assert.equal(captureProfile(720,960,{preview:true}).ratio,1);
+ const huge=captureProfile(4000,6000,{dpr:3});assert.ok(huge.ratio*6000<=4096);
+ assert.equal(captureProfile(720,960,{high:false}).fps,30);
 });
