@@ -148,7 +148,7 @@
     },
     {
       "file": "public/panel.js",
-      "sha256": "87bad97423eafe7376ca57286ab97a6d01176a6efa0ba0fde1a7b4f65c2e03ac",
+      "sha256": "b5ac599e97911dd9c7f6fee21942374968d7fe5df4feddaeb09f9e4851ec3c1c",
       "exports": [],
       "dependencies": [
         "public/party-layout.js",

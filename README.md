@@ -57,7 +57,7 @@ No Windows, **INICIAR.bat** mantém o servidor no terminal. **ABRIR-LIVE.bat** i
 ## TikTok Live Studio — link local restaurado
 1. Execute **INICIAR.bat** e abra o painel em http://localhost:3000.
 2. Use **Copiar link vertical**. O painel voltou a usar `http://localhost:3000/overlay.html?source=1&format=portrait`, sem substituir o endereço por um túnel externo.
-3. Utilize o link local no fluxo que já funcionava no seu LIVE Studio, com **1080 × 1920** e áudio da cena. Para horizontal, copie o link horizontal e use **1920 × 1080**. O visual, os presentes e as configurações permanecem preservados.
+3. No LIVE Studio, clique com o botão direito na fonte **Link → Configurações**. Ative **Resolução personalizada** e preencha **Largura 1080 / Altura 1920**; aplique. Depois use **Tela cheia → Ajustar à tela**, preservando a proporção. Para horizontal, copie o link horizontal e configure **1920 × 1080**. O tamanho nas propriedades da fonte define a resolução de captura; arrastar ou esticar a caixa na cena não aumenta essa resolução. O endereço do overlay não altera as propriedades do LIVE Studio automaticamente.
 4. Ajuste a fonte à tela preservando a proporção. Não amplie uma fonte criada em 800 × 600 para preencher uma transmissão vertical.
 
 A saída usa canvas em tela inteira, cenário cobrindo o quadro, antialiasing e 30 FPS como alvo na fonte Link. O painel conserva a prévia silenciosa. A composição se adapta ao tamanho real da fonte, com o catálogo sobreposto à direita e comentários procurando espaços livres.

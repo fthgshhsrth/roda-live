@@ -1,13 +1,16 @@
 import {partyRole} from './party-layout.js';
 import {giftActions} from './gift-catalog.js';
 const $=id=>document.getElementById(id);
-let state,settingsLoaded=false,rules=[],timer,catalog=[];
+let state,settingsLoaded=false,rules=[],timer,catalog=[],sourceOrientation='portrait';
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(timer);timer=setTimeout(()=>$('toast').style.display='none',4500);}
 async function api(endpoint,data={}){const r=await fetch('/api/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw Error(j.error||'Falha no servidor');return j;}
 function action(fn){return async e=>{e?.preventDefault();try{await fn(e);}catch(err){toast(err.message);}};}
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function button(text,fn,cls='quiet'){const b=el('button',text,cls);b.type='button';b.onclick=action(fn);return b;}
 function localOverlay(orientation='portrait'){const link=new URL('/overlay.html',location.origin);link.searchParams.set('source','1');link.searchParams.set('format',orientation);return link.href;}
+function renderSource(){
+ $('sourceURL').value=localOverlay(sourceOrientation);$('sourceStatus').textContent='Nas configurações da fonte Link, ative Resolução personalizada: '+(sourceOrientation==='portrait'?'largura 1080 e altura 1920':'largura 1920 e altura 1080')+'. Depois use Ajustar à tela.';
+}
 function loadSettings(s){for(const k of ['title','subtitle','duration','speed'])$(k).value=s[k];for(const k of ['comments','transparent'])$(k).checked=s[k];rules=structuredClone(s.rules);renderRules();settingsLoaded=true;}
 function renderRules(){
  $('ruleRows').replaceChildren();const effects={join:'Entrar / renovar',marry:'Noivo',bride:'Noiva',band:'Banda',dj:'DJ',reset:'Reiniciar festa'};
@@ -26,7 +29,7 @@ function renderRules(){
 let peopleKey='',logKey='',jobKey='',giftKey='';
 function render(s){
  state=s;const ready=document.getElementById('audioStatus');if(ready){ready.textContent=s.audioReady?'● Downloader pronto · yt-dlp + FFmpeg':'○ Downloader precisa de yt-dlp + FFmpeg · veja INSTALAR-AUDIO.ps1';ready.style.color=s.audioReady?'#d6fb79':'#dab67a';}if(!settingsLoaded)loadSettings(s.settings);
- $('sourceURL').value=localOverlay();$('sourceStatus').textContent='Link local restaurado. Mantenha o servidor aberto neste computador.';
+ renderSource();
  const confirmed=(s.giftCatalog||[]).filter(g=>g.status==='verified').length;
  $('catalogSummary').textContent=s.catalogStatus==='ready'?confirmed+'/6 presentes confirmados. '+(s.giftCatalog||[]).filter(g=>g.status!=='verified').map(g=>giftActions[g.effect]+': '+(g.status==='ambiguous'?'selecione o item':'presente indisponível')).join(' · '):s.catalogStatus==='loading'?'Carregando catálogo automaticamente…':s.catalogStatus==='error'?'Falha no catálogo. Clique em Presentes da live para tentar novamente.':'Conecte a live para confirmar nomes, imagens, IDs e moedas automaticamente.';
  $('status').textContent=s.status.message;$('statusLed').style.background=s.status.phase==='online'?'#d6fb79':s.status.phase==='error'?'#ff8484':'#899578';
@@ -60,9 +63,9 @@ $('loadCatalog').onclick=action(async()=>{
  catalog=j.gifts;renderRules();toast('Catálogo carregado. Selecione os presentes e salve o mapa.');
 });
 for(const [id,orientation] of [['copyPortrait','portrait'],['copyLandscape','landscape']])$(id).onclick=action(async()=>{
- const url=localOverlay(orientation);$('sourceURL').value=url;
- try{await navigator.clipboard.writeText(url);toast('Link copiado. Fonte Link: '+(orientation==='portrait'?'1080 × 1920':'1920 × 1080')+'.');}
+ sourceOrientation=orientation;renderSource();const url=localOverlay(orientation);
+ try{await navigator.clipboard.writeText(url);toast('Link copiado. Ative Resolução personalizada na fonte: '+(orientation==='portrait'?'largura 1080, altura 1920':'largura 1920, altura 1080')+'. Depois use Ajustar à tela.');}
  catch{window.prompt('Copie o link da fonte:',url);}
 });
-$('startSource').onclick=()=>{render(state);toast('Link local restaurado. Visual e configurações mantidos.');};
+$('startSource').onclick=()=>{sourceOrientation='portrait';renderSource();toast('Link local restaurado. Visual e configurações mantidos.');};
 $('sourceURL').onclick=()=>{$('sourceURL').select();};

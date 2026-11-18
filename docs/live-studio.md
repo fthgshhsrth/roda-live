@@ -1,5 +1,13 @@
 # Link local do overlay para LIVE Studio
 
+## Corrigir a importação em outra resolução
+
+No LIVE Studio, clique com o botão direito na fonte **Link → Configurações**. Ative **Resolução personalizada**, informe **Largura 1080 / Altura 1920** e aplique. Depois use **Tela cheia → Ajustar à tela**. Confira também se a cena está no modo vertical. Para horizontal, use **1920 × 1080** na fonte e na cena.
+
+Esses valores precisam ser definidos nas propriedades da fonte, antes de dimensioná-la na cena. Arrastar as bordas ou usar Esticar amplia/deforma a captura existente; não faz o navegador da fonte passar a renderizar em Full HD. O parâmetro `format=portrait` do endereço não tem permissão para modificar a resolução configurada no LIVE Studio. Não há alteração do projeto que substitua essa configuração do aplicativo.
+
+Referência: [guia do Livedeck para configurar uma fonte Link no LIVE Studio](https://help.livedeck.de/en/pages/overlay-link-obs-tiktok-studio). A ajuda oficial do TikTok não pôde ser aberta nesta consulta; os nomes das opções devem ser conferidos na versão instalada.
+
 O painel voltou a copiar o endereço local que já era usado: `http://localhost:3000/overlay.html?source=1&format=portrait`. Use **Copiar link vertical**, com 1080 × 1920. Para horizontal, use o botão correspondente e 1920 × 1080. Não é necessário gerar um túnel externo. Cenário, catálogo, resolução e todas as configurações da festa foram mantidos. A página de referência orienta a composição visual; seu endereço não é usado como fonte da festa.
 
 A composição usa o canvas em tela inteira e acompanha o tamanho efetivo da fonte. O cenário preenche o fundo; nomes e catálogo são renderizados diretamente no navegador. O alvo da fonte Link é 30 FPS, sem reduzir o buffer Full HD. O modo antigo de janela continua disponível, e a prévia do painel permanece mais leve e silenciosa. O resultado final ainda depende da GPU, da resolução da fonte e da codificação da transmissão.
