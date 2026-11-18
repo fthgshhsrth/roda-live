@@ -181,7 +181,7 @@
     },
     {
       "file": "public/scene3d.js",
-      "sha256": "b906cd6912133819da8603492f8b25a30fe1660e75c5c825694392062b156adf",
+      "sha256": "a1855a767fae751722b67cc97063a3f645ca28abf1fae245b90bb9cb55803986",
       "exports": [],
       "dependencies": [
         "three",
@@ -237,7 +237,7 @@
     },
     {
       "file": "qa-party.mjs",
-      "sha256": "ee9245d5053f3c1d62f1c3317485428caa6a2fe0388599beb8e6968e0126be58",
+      "sha256": "a2ae09f058b377954858fdedae2d7469efc8b290f9c00f07c06bde4a81a54db6",
       "exports": [],
       "dependencies": [
         "node:child_process",

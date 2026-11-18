@@ -287,10 +287,11 @@ function labelLayout(entries, now) {
     visibleEntries.push(entry);
     if (state.settings.comments && entry.person.commentUntil > now && entry.person.comment) active.push(entry);
   }
-  const placed = [],featured=visibleEntries.find(e=>shot.mode==='focus'&&e.person.id===shot.targetId&&e.person.donor);
-  if(featured&&!active.includes(featured)){
-    const name=featured.name;name.hidden=false;
-    const box=placeProjectedBubble(featured.anchor,name.offsetWidth,name.offsetHeight,obstacles,[],bounds);
+  const placed = [],named=visibleEntries.filter(e=>e.person.donor);
+  named.sort((a,b)=>Number(b.person.id===shot.targetId)-Number(a.person.id===shot.targetId));
+  for(const entry of named){
+    const name=entry.name;name.hidden=false;
+    const box=placeProjectedBubble(entry.anchor,name.offsetWidth,name.offsetHeight,obstacles,[],bounds);
     if(box){name.style.left=box.x+'px';name.style.top=box.y+'px';name.style.zIndex='1900';obstacles.push(box);}else name.hidden=true;
   }
   for (const entry of active.sort((a, b) => b.person.commentUntil - a.person.commentUntil).slice(0,2)) {

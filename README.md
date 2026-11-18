@@ -25,7 +25,7 @@ Os valores da tabela são os configurados para esta festa, não uma garantia do 
 - As primeiras cinco rosquinhas de doadores diferentes ocupam as cinco posições. Depois, novos doadores substituem as posições em rodízio. Um mesmo doador não ocupa duas posições.
 - O boné coloca o doador no posto de DJ, com console e fones.
 - Cada pessoa ocupa um único papel. Ao assumir outro, libera o anterior. Um substituído retorna à roda. Não existe limite fixo de entrada; a permanência configurável continua renovada pelas rosas.
-- Papéis especiais não expiram pelo tempo normal da roda. O nome aparece no personagem em destaque; comentários exibem o autor e ficam limitados a dois balões sem sobreposição.
+- Papéis especiais não expiram pelo tempo normal da roda. Os nomes aparecem acima da cabeça dos participantes visíveis, inclusive na visão geral e durante comentários; comentários exibem o autor e ficam limitados a dois balões sem sobreposição.
 - A Serenata de 2999 reinicia participantes, casal, banda, DJ, contadores e áudio. Mantém o mapa de presentes, as configurações, a conexão e os arquivos de música locais. O nome de quem reiniciou aparece no aviso.
 
 A câmera alterna planos gerais e closes aleatórios a cada poucos segundos, inclusive enquanto só há convidados de ambiente. O presente mais recente interrompe o enquadramento anterior imediatamente. Na entrada por rosa, o personagem acena para a câmera e o aviso aparece ao receber o evento. Comentários procuram espaço sem cobrir corpos, nomes ou outras bolhas.

@@ -27,6 +27,16 @@ try{
  await cdp('Runtime.enable');await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:1080,height:1920,deviceScaleFactor:1,mobile:false});
  await cdp('Page.navigate',{url:'http://localhost:3011/overlay/festa?jogo=festa&source=1&quality=low'});
  await until('window.roda3D?.diagnostics().frames>2',60000);
+ if(process.argv.includes('--names-only')){
+  for(const user of ['Ana','Bia','Caio'])await api('simulate',{user,giftName:'Rose',coins:1});
+  await until("window.roda3D.diagnostics().camera.mode==='overview'&&window.roda3D.diagnostics().visibleNames>=2");
+  assert.ok(await evaluate("[...window.roda3D.characters.values()].filter(e=>!e.name.hidden).every(e=>e.person.donor&&e.name.textContent.includes(e.person.name)&&parseFloat(e.name.style.top)+e.name.offsetHeight<e.anchor.y)"));
+  await api('simulate',{user:'Ana',giftName:'Rose',coins:1});await api('simulate',{kind:'comment',user:'Ana',comment:'Meu nome continua aparecendo!'});
+  await until("(()=>{const e=window.roda3D.characters.get('Ana');return e&&!e.name.hidden&&!e.bubble.hidden})()");
+  assert.equal(await evaluate('window.roda3D.diagnostics().bubbleOverlap'),false);
+  assert.equal(errors.length,0,errors.join('\n'));
+  console.log('PASS: nomes acima das cabeças na visão geral e durante comentários; sem sobreposição.');
+ }else{
  assert.equal(await evaluate("document.querySelectorAll('.gift-item').length"),6);
  await until("[...document.querySelectorAll('.gift-icon img')].length===6&&[...document.querySelectorAll('.gift-icon img')].every(i=>i.complete&&i.naturalWidth>0)");
  assert.equal(await evaluate("/confirmar/i.test(document.querySelector('.gift-sidebar').innerText)"),false);
@@ -66,7 +76,7 @@ try{
  assert.equal(await evaluate("window.roda3D.characters.get('Noiva').model.weddingRole"),'bride');
  assert.equal(await evaluate("window.roda3D.characters.get('Noivo').model.weddingRole"),'groom');
  assert.equal(await evaluate("document.querySelectorAll('.donor-name').length"),9);
- assert.ok(await evaluate('window.roda3D.diagnostics().visibleNames<=1'));
+ assert.ok(await evaluate('window.roda3D.diagnostics().visibleNames>=1'));
  assert.ok(await evaluate("(()=>{const e=[...window.roda3D.characters.values()].filter(e=>!['band','dj'].includes(e.person.stageRole));return Math.max(...e.map(x=>x.model.dancer.position.y))-Math.min(...e.map(x=>x.model.dancer.position.y))>.001})()"));
  assert.ok(await evaluate("window.roda3D.characters.get('Noivo').model.root.position.distanceTo(window.roda3D.characters.get('Noiva').model.root.position)>2.5"));
  await until("window.roda3D.diagnostics().camera.mode==='overview'&&window.roda3D.diagnostics().camera.distance>30",18000);
@@ -103,5 +113,6 @@ try{
  assert.equal(errors.length,0,errors.join('\n'));
  const report={localLinkRestored:'PASS',alertLatencyMs,overviewFitsAll:'PASS',randomCameraWithoutDonors:'PASS',expandingSpiral:'PASS',noBodyOverlap25:'PASS',fastSoloDance:'PASS',separatedWeddingRoles:'PASS',noPendingText:'PASS',fingerHeart5:'PASS',ambientGuests10:'PASS',movingClubLights:'PASS',anatomy4limbs:'PASS',wings2:'PASS',antennae2:'PASS',naturalHead:'PASS',weddingCake3tiers:'PASS',cakeInWeddingShot:'PASS',animatedGlobes5:'PASS',tiktokArtwork6:'PASS',rightSidebar:'PASS',band5:'PASS',instruments:'PASS',dj:'PASS',cleanNames:'PASS',catalog6:'PASS',portrait1080:'PASS',landscape1920:'PASS',commentsNoOverlap:'PASS',roleReplacement:'PASS',reset2999:'PASS',javascriptErrors:errors.length};
  fs.writeFileSync(path.join(root,'verificacao/resultado-festa.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+ }
 }catch(e){console.error(e);process.exitCode=1;}
 finally{if(ws?.readyState===1)ws.send(JSON.stringify({id:999999,method:'Browser.close'}));await api('clear',{});await sleep(100);ws?.close();browser.kill();server.kill();}
