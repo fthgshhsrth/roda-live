@@ -2,10 +2,51 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fresh,gift,comment,prune,settings,upgradeState,partyRole,clearParty,removePerson} from './wheel.js';
 import {sceneCast,BAND,AMBIENT_GUEST_COUNT} from './public/party-layout.js';
-import {CameraDirector} from './public/camera-director.js';
-import {placeProjectedBubble,overlaps} from './public/layout.js';
-import {videoURL,downloadArgs} from './media.js';
+import {CameraDirector,CAMERA_TIMING} from './public/camera-director.js';
+import {placeProjectedBubble,placeNameTag,overlaps} from './public/layout.js';
+test('nome fica colado acima da cabeça e some se o lugar estiver ocupado, sem ser empurrado',()=>{
+ const bounds={width:1080,minX:10,maxX:1070,minY:100,maxY:1900};
+ assert.deepEqual(placeNameTag({x:500,y:800},120,30,[],bounds),{x:440,y:766,w:120,h:30});
+ assert.equal(placeNameTag({x:500,y:800},120,30,[{x:480,y:770,w:40,h:20}],bounds),null);
+ assert.equal(placeNameTag({x:500,y:120},120,30,[],bounds),null);
+ assert.equal(placeNameTag({x:1065,y:800},120,30,[],bounds).x,950);
+});
+import {videoURL,downloadArgs,isPlaylist} from './media.js';
 import {activate,control} from './music.js';
+test('playlist toca em sequência, volta ao início e pula faixa que sumiu do disco',()=>{
+ const tracks=['a.mp3','b.mp3','c.mp3'],m={volume:.5};activate(m,'a.mp3',0);
+ control(m,{action:'ended',file:'a.mp3',revision:m.revision},1,tracks);assert.equal(m.file,'b.mp3');assert.equal(m.playing,true);
+ control(m,{action:'next'},2,tracks);assert.equal(m.file,'c.mp3');
+ control(m,{action:'ended',file:'c.mp3',revision:m.revision},3,tracks);assert.equal(m.file,'a.mp3','depois da última volta para a primeira');
+ control(m,{action:'prev'},4,tracks);assert.equal(m.file,'c.mp3');
+ control(m,{action:'select',file:'b.mp3'},5,tracks);assert.equal(m.file,'b.mp3');assert.equal(m.volume,.5);
+ assert.throws(()=>control(m,{action:'select',file:'x.mp3'},6,tracks));
+ const old=m.revision;control(m,{action:'ended',file:'b.mp3',revision:old-1},7,tracks);assert.equal(m.file,'b.mp3','fim atrasado de outra faixa é ignorado');
+ const gone={file:'sumiu.mp3',playing:false,position:0,changed:0,revision:1};control(gone,{action:'play'},8,tracks);assert.equal(gone.file,'a.mp3');assert.equal(gone.playing,true);
+});
+test('conectar na live não usa a rota paga da Euler (lista de presentes assinada = plano Business)',async()=>{
+ const {TikTokLiveConnection,RouteConfig}=await import('tiktok-live-connector');
+ const {liveOptions}=await import('./party.js');
+ const original={ws:RouteConfig.fetchSignedWebSocketFromProvider,sign:RouteConfig.fetchWebcastSignatureFromProvider};
+ const paid=()=>{throw Error('ROTA PAGA');};
+ RouteConfig.fetchWebcastSignatureFromProvider=paid;
+ RouteConfig.fetchSignedWebSocketFromProvider=async()=>{throw Error('CHEGOU NO WEBSOCKET GRATUITO');};
+ try{
+  const conn=new TikTokLiveConnection('qualquer',liveOptions());
+  conn.fetchRoomId=async()=>'123';conn.fetchRoomInfo=async()=>({data:{status:2}});conn.fetchAvailableGifts=paid;conn.on('error',()=>{});
+  await assert.rejects(conn.connect(),/CHEGOU NO WEBSOCKET GRATUITO/);
+  assert.equal(liveOptions().signApiKey,undefined);assert.equal(liveOptions('k').signApiKey,'k');
+ }finally{Object.assign(RouteConfig,{fetchSignedWebSocketFromProvider:original.ws,fetchWebcastSignatureFromProvider:original.sign});}
+});
+test('downloader aceita playlist do YouTube e ignora Mix automático',()=>{
+ assert.ok(isPlaylist('https://www.youtube.com/playlist?list=PL123'));
+ assert.ok(isPlaylist('https://www.youtube.com/watch?v=abc&list=PL123'));
+ assert.ok(!isPlaylist('https://www.youtube.com/watch?v=abc&list=RDabc'));
+ assert.ok(!isPlaylist('https://www.youtube.com/watch?v=abc'));
+ const list=downloadArgs('https://www.youtube.com/playlist?list=PL123',process.cwd(),process.cwd());
+ assert.ok(list.includes('--yes-playlist')&&!list.includes('--no-playlist')&&list.includes('--ignore-errors'));
+ assert.ok(downloadArgs('https://www.youtube.com/watch?v=abc',process.cwd(),process.cwd()).includes('--no-playlist'));
+});
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 import {captureProfile} from './public/capture-profile.js';
 import {DANCE_BPM,waltzPose,soloWeddingPose} from './public/waltz.js';
@@ -108,12 +149,13 @@ test('câmera prioriza noivo e papéis recentes, depois volta à visão geral',(
 
 test('câmera alterna zoom geral e aleatório e uma rosa interrompe qualquer foco',()=>{
  const d=new CameraDirector(0,()=>0),ids=['A','B','C'];
- assert.equal(d.update(2200,ids).targetId,'A');assert.equal(d.update(4700,ids).mode,'overview');
- assert.equal(d.update(7000,ids).targetId,'B');
- d.marry({person:'A'},7001);assert.equal(d.update(7001,ids).reason,'marry');
- d.rose({person:'C'},7002);assert.equal(d.update(7002,ids).targetId,'C');assert.equal(d.update(7002,ids).reason,'rose');
- d.rose({person:'B'},7003);assert.equal(d.update(7003,ids).targetId,'B');
- assert.equal(d.update(10000,ids).mode,'overview');assert.equal(d.update(12300,ids).mode,'focus');
+ const {overview:O,random:Rn,rose:Ro}=CAMERA_TIMING,t=O+Rn+O;
+ assert.equal(d.update(O,ids).targetId,'A');assert.equal(d.update(O+Rn,ids).mode,'overview');
+ assert.equal(d.update(t,ids).targetId,'B');
+ d.marry({person:'A'},t+1);assert.equal(d.update(t+1,ids).reason,'marry');
+ d.rose({person:'C'},t+2);assert.equal(d.update(t+2,ids).targetId,'C');assert.equal(d.update(t+2,ids).reason,'rose');
+ d.rose({person:'B'},t+3);assert.equal(d.update(t+3,ids).targetId,'B');
+ assert.equal(d.update(t+3+Ro,ids).mode,'overview');assert.equal(d.update(t+3+Ro+O,ids).mode,'focus');
 });
 test('bolhas respeitam corpos e limites em janelas diferentes',()=>{
  for(const width of [360,720,1920]){
@@ -207,6 +249,11 @@ test('eventos modernos leem extendedGiftInfo e reagem antes do fim do combo',()=
  assert.equal(gift(s,{...event,repeatEnd:true},200),null);
  assert.equal(s.couple.groomId,'actual-user');assert.equal(gift(s,{...event,repeatEnd:true},300),null);
  assert.equal(s.people[0].name,'Pessoa');
+});
+test('formato legado aninhado identifica presentes mesmo sem campos no topo',()=>{
+ const s=fresh(),event={user:{uniqueId:'legado',nickname:'Legado'},gift:{gift_id:5655,repeat_count:1,repeat_end:1,gift_type:1,diamond_count:1,name:'Rose'}};
+ assert.equal(gift(s,event,100)?.effect,'join');
+ assert.equal(s.people[0].id,'legado');assert.equal(s.roses,1);
 });
 test('migração do noivo troca nome, preço e IDs antigos sem mudar os outros presentes',()=>{
  const s=fresh();s.schemaVersion=5;s.settings.rules[1]={...s.settings.rules[1],names:'Hand Heart,Mãos em coração',coins:100,ids:'401'};

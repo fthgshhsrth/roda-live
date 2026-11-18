@@ -1,5 +1,15 @@
 # Link local do overlay para LIVE Studio
 
+## Causa real da imagem esticada (confirmada nos logs em 18/11/2026)
+
+O LIVE Studio pede o navegador em 1080×1920, mas o Windows limita a janela à altura útil do monitor: num monitor 1920×1080 com barra de tarefas, a fonte é capturada em **1080×1032** (`[BaseVisual-browser …] is ready, size: {x: 1080, y: 1032}`). O overlay do serviço de referência também é capturado em 1080×1032. Ele fica nítido porque é um Godot com `stretch/aspect=expand`, `stretch/mode=canvas_items` e fundo transparente: usa a janela inteira pixel a pixel e entra 1:1 na largura da tela vertical (1080), sem ampliação. O resto do quadro vertical fica transparente.
+
+O overlay faz o mesmo: usa a janela inteira (1:1) e, na fonte Link, o fundo é sempre transparente (sem parede nem salão) — só a festa aparece.
+
+- Fonte Link `http://localhost:3000/overlay.html`, resolução 1080×1920, depois **Tela cheia → Ajustar à tela** (não use Preencher nem estique: ampliar é o que borra).
+- Não reduza a cena a um quadro 9:16 menor dentro da janela: isso joga fora pixels (580×1032 em vez de 1080×1032).
+- Ocultar automaticamente a barra de tarefas do Windows libera a altura total (1080×1080).
+
 ## Corrigir a importação em outra resolução
 
 No LIVE Studio, clique com o botão direito na fonte **Link → Configurações**. Ative **Resolução personalizada**, informe **Largura 1080 / Altura 1920** e aplique. Depois use **Tela cheia → Ajustar à tela**. Confira também se a cena está no modo vertical. Para horizontal, use **1920 × 1080** na fonte e na cena.

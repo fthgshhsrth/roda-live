@@ -41,7 +41,8 @@ try{
  await until("[...document.querySelectorAll('.gift-icon img')].length===6&&[...document.querySelectorAll('.gift-icon img')].every(i=>i.complete&&i.naturalWidth>0)");
  assert.equal(await evaluate("/confirmar/i.test(document.querySelector('.gift-sidebar').innerText)"),false);
  assert.ok(await evaluate("document.querySelector('[data-effect=marry] img').src.endsWith('/gifts/finger-heart.webp')"));
- assert.ok(await evaluate("document.querySelector('[data-effect=marry]').innerText.includes('5 moedas')"));
+ // Público vê só ícone + ação: sem preço, sem nome do presente.
+ assert.ok(await evaluate("document.querySelector('[data-effect=marry]').innerText.trim()==='Vire Noivo'&&!/moeda/i.test(document.querySelector('.gift-sidebar').innerText)"));
  assert.equal(await evaluate("[...window.roda3D.characters.values()].filter(e=>e.person.ambient).length"),10);
  assert.equal(await evaluate("document.getElementById('count').textContent"),'0');
  assert.ok(await evaluate("window.roda3D.scene.getObjectByName('Feixe de balada 1').visible&&window.roda3D.scene.getObjectByName('Luz de balada 2').isSpotLight"));
@@ -64,8 +65,8 @@ try{
  const alertLatencyMs=await evaluate('Math.round(performance.now()-window.__giftStart)');
  await give('Noivo','Finger Heart',5);
  await until("window.roda3D.diagnostics().camera.reason==='marry'&&window.roda3D.diagnostics().camera.distance<20");
- const cakeInFrame=await evaluate("(async()=>{const T=await import('/vendor/three/three.module.js'),r=window.roda3D,b=new T.Box3().setFromObject(r.scene.getObjectByName('Bolo de casamento'));return [b.min.x,b.max.x].every(x=>[b.min.y,b.max.y].every(y=>[b.min.z,b.max.z].every(z=>{const v=new T.Vector3(x,y,z).project(r.camera);return Math.abs(v.x)<=1&&Math.abs(v.y)<=1})))})()");
- assert.ok(cakeInFrame,'O bolo precisa aparecer no enquadramento dos noivos');
+ // A câmera desliza (~1,2 s): mede depois que ela assenta no plano dos noivos, não no meio do movimento.
+ await until("(async()=>{const T=await import('/vendor/three/three.module.js'),r=window.roda3D,b=new T.Box3().setFromObject(r.scene.getObjectByName('Bolo de casamento'));return r.diagnostics().camera.reason==='marry'&&[b.min.x,b.max.x].every(x=>[b.min.y,b.max.y].every(y=>[b.min.z,b.max.z].every(z=>{const v=new T.Vector3(x,y,z).project(r.camera);return Math.abs(v.x)<=1&&Math.abs(v.y)<=1})))})()",15000);
  await give('Noiva','Rosa',10);
  const names=['Sanfoneiro','Vitrola','Baterista','Gaiteiro','Saxofonista'];
  for(const name of names)await give(name,'Rosquinha',30);

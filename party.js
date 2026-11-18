@@ -16,10 +16,12 @@ export function fresh(){return {schemaVersion:7,partyEpoch:0,couple:emptyCouple(
  music:{file:null,playing:false,position:0,volume:.65,changed:Date.now(),revision:0,duration:0,queue:[]}};}
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export function identity(e){const u=e.user||e;return {id:String(u.uniqueId||u.userId||'visitante').slice(0,100),name:String(u.nickname||u.uniqueId||'Visitante').slice(0,40)};}
-export function giftPrice(e){const value=e.diamondCount??e.giftDetails?.diamondCount??e.extendedGiftInfo?.diamond_count??e.extendedGiftInfo?.diamondCount??e.gift?.diamond_count;return value==null?null:Number(value);}
+export function giftPrice(e){const value=e.diamondCount??e.diamond_count??e.giftDetails?.diamondCount??e.giftDetails?.diamond_count??e.extendedGiftInfo?.diamond_count??e.extendedGiftInfo?.diamondCount??e.gift?.diamond_count??e.gift?.diamondCount;return value==null?null:Number(value);}
+export function giftId(e){return e.giftId??e.giftDetails?.giftId??e.giftDetails?.gift_id??e.gift?.giftId??e.gift?.gift_id??null;}
+export function giftName(e){return e.giftName||e.giftDetails?.giftName||e.giftDetails?.name||e.extendedGiftInfo?.name||e.gift?.name||e.gift?.giftName||'';}
 export function matchGift(s,e,ruleSet=s.settings.rules){
- const name=norm(e.giftName||e.giftDetails?.giftName||e.extendedGiftInfo?.name||e.gift?.name),price=giftPrice(e);
- const byId=ruleSet.filter(r=>String(r.ids||'').split(',').some(id=>id.trim()&&id.trim()===String(e.giftId)));
+ const name=norm(giftName(e)),price=giftPrice(e),id=giftId(e);
+ const byId=ruleSet.filter(r=>String(r.ids||'').split(',').some(ruleId=>ruleId.trim()&&ruleId.trim()===String(id)));
  const byName=ruleSet.filter(r=>!r.catalogBound&&r.names.split(',').some(alias=>norm(alias)===name));
  const candidates=byId.length?byId:byName;
  const matching=candidates.filter(r=>r.coins==null||price===Number(r.coins));
@@ -45,8 +47,8 @@ function returnToFloor(s,id,now){
 const streaks=new WeakMap();
 export function gift(s,e,now=Date.now(),ruleSet=s.settings.rules){
  const rule=matchGift(s,e,ruleSet);if(!rule)return null;
- const who=identity(e),total=Math.max(1,Math.min(10000,Math.trunc(Number(e.repeatCount)||1)));
- const streak=Number(e.giftType??e.giftDetails?.giftType)===1,end=!!e.repeatEnd;
+ const who=identity(e),total=Math.max(1,Math.min(10000,Math.trunc(Number(e.repeatCount??e.giftDetails?.repeatCount??e.gift?.repeatCount??e.gift?.repeat_count)||1)));
+ const streak=Number(e.giftType??e.giftDetails?.giftType??e.gift?.giftType??e.gift?.gift_type)===1,end=!!(e.repeatEnd??e.giftDetails?.repeatEnd??e.gift?.repeatEnd??e.gift?.repeat_end);
  const rawId=e.common?.msgId??e.msgId??e.eventId;
  const messageId=rawId?(streak?rawId+':'+total+':'+end:String(rawId)):null;
  s.seenGiftIds??=[];if(messageId&&s.seenGiftIds.includes(String(messageId)))return null;
@@ -128,3 +130,7 @@ export function upgradeState(s){
  for(const p of s.people)p.joinedAt??=p.lastGiftAt||0;
  s.settings.capacity=0;s.schemaVersion=7;return s;
 }
+
+// Opções do conector TikTok: nada que use rota paga da Euler. A lista gift/list é assinada pelo plano Business;
+// com enableExtendedGiftInfo o connect() inteiro falhava sem esse plano. Presentes chegam com nome e preço pelo WebSocket gratuito.
+export function liveOptions(apiKey){return {enableExtendedGiftInfo:false,processInitialData:false,...(apiKey?{signApiKey:apiKey}:{})};}

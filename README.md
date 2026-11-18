@@ -15,7 +15,7 @@ Uma festa interativa para TikTok: baratas com carapaça segmentada em tons natur
 
 O valor é o de uma unidade do presente, não a soma do combo. Dez rosas comuns continuam sendo rosas comuns e não concedem a vaga de noiva.
 
-**O catálogo é carregado automaticamente ao conectar.** O overlay mostra os seis itens com nome, imagem, moedas e ação. Uma ação só é confirmada quando há uma correspondência única por nome/ID e custo. Se o presente não existir na live, aparece indisponível. Se houver variantes, selecione o item em **Presentes da live** e salve o mapa. Nunca escolhemos um presente apenas por ter o mesmo preço.
+**O catálogo é carregado automaticamente ao conectar.** Para o público, o overlay mostra só o ícone de cada presente e o que ele faz; nome, moedas e status ficam no painel. Uma ação só é confirmada quando há uma correspondência única por nome/ID e custo. Se o presente não existir na live, aparece indisponível. Se houver variantes, selecione o item em **Presentes da live** e salve o mapa. Nunca escolhemos um presente apenas por ter o mesmo preço.
 
 Os valores da tabela são os configurados para esta festa, não uma garantia do catálogo atual do TikTok. O valor é por unidade. O noivo usa `Finger Heart` (Mãos Fazendo Coração); `Hand Heart` (Mãos em Coração) e `Heart Me` são presentes diferentes e não concedem esse papel. O reinício requer o item confirmado e valor de 2999 moedas. Catálogo, itens sazonais e captura real devem ser conferidos na conta que transmitirá.
 ## Como a festa funciona
@@ -36,7 +36,7 @@ Presentes em combo são processados desde a primeira unidade: entrar, alertar e 
 
 A festa mantém dez convidados de ambiente enquanto houver poucos participantes. Eles dançam avulsos, usam roupas e acessórios diferentes e não têm nomes, presentes, comentários ou papéis de doadores. Conforme chegam participantes reais, esses convidados cedem lugar. O contador inclui apenas participantes reais. O reinício restaura a composição de ambiente.
 
-O catálogo do overlay mostra ícones, funções e moedas, sem “a confirmar”. A conexão, eventuais itens indisponíveis e a validação dos IDs continuam visíveis no painel. Remover o texto do overlay não transforma o modo local em uma conexão TikTok confirmada.
+O catálogo do overlay mostra só ícones e funções, sem preço nem “a confirmar”. A conexão, eventuais itens indisponíveis e a validação dos IDs continuam visíveis no painel. Remover o texto do overlay não transforma o modo local em uma conexão TikTok confirmada.
 ## Cenário do casamento
 Um bolo de três andares, com cobertura, detalhes dourados, flores e alianças no topo, fica ao lado dos noivos. A câmera do noivo inclui o bolo no enquadramento. A pista reserva o centro para os dois personagens e o bolo; convidados dançam na espiral externa.
 
@@ -72,7 +72,9 @@ Instale yt-dlp, FFmpeg e ffprobe no PATH ou coloque os executáveis em tools/. I
 
 Cole um link de vídeo compatível com yt-dlp e clique em **Baixar e tocar na live**. O servidor extrai MP3 para music/ e inicia automaticamente a faixa na cena. Há pausa, retomada, volume, posição e cancelamento.
 
-Um vídeo por vez, sem playlists ou streams ao vivo, com limite de 1 GB e uma hora. Use conteúdo autorizado. Se a festa for reiniciada, o download em andamento é cancelado e não pode reativar o áudio da festa anterior.
+Aceita vídeo ou **playlist do YouTube** (até 50 músicas; vídeos indisponíveis são pulados; os "Mix" automáticos `list=RD…` baixam só o vídeo). A primeira música já toca enquanto o resto baixa. Todos os MP3 de `music/` formam a playlist, na ordem em que foram baixados: ao acabar uma, toca a próxima, e depois da última volta à primeira. No painel há ⏮ ⏭ e a lista clicável. Sem streams ao vivo; limite de 1 GB por vídeo. Use conteúdo autorizado.
+
+Só uma fonte toca o som. A fonte Link do LIVE Studio tem prioridade: abrir o overlay em uma aba comum não tira o som da live. Se a festa for reiniciada, o download em andamento é cancelado e não pode reativar o áudio da festa anterior.
 
 ## Conexão TikTok
 Digite o @ de uma conta ao vivo. O conector é não oficial e depende do TikTok e do provedor de assinatura. Se exigida, defina EULER_API_KEY no ambiente antes de iniciar; arquivos .env não são lidos automaticamente. Nunca publique credenciais.

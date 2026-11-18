@@ -18,8 +18,16 @@ export function executable(root, name) {
   return fs.existsSync(local) ? local : name;
 }
 
+// Playlist de verdade (/playlist ou ?list=). Os "Mix" automáticos do YouTube (list=RD…) não contam: são quase infinitos.
+export function isPlaylist(raw) {
+  const url = new URL(raw), list = url.searchParams.get('list');
+  return url.pathname.startsWith('/playlist') || (!!list && !/^RD/i.test(list));
+}
+export const PLAYLIST_LIMIT = 50;
+
 export function downloadArgs(url, root, musicDir) {
-  const args = ['--ignore-config', '--no-playlist', '--no-overwrites', '--windows-filenames',
+  const list = isPlaylist(url) ? ['--yes-playlist', '--playlist-end', String(PLAYLIST_LIMIT), '--ignore-errors'] : ['--no-playlist'];
+  const args = ['--ignore-config', ...list, '--no-mtime', '--no-overwrites', '--windows-filenames',
     '--encoding', 'utf-8', '--newline', '--no-quiet', '--progress', '--socket-timeout', '25',
     '--retries', '2', '--max-filesize', '1G', '--match-filter', '!is_live',
     '--js-runtimes', 'node:' + process.execPath, '-f', 'bestaudio/best', '-x',
@@ -31,18 +39,21 @@ export function downloadArgs(url, root, musicDir) {
 }
 
 export function startDownload(raw, {root, musicDir, onUpdate, onComplete}) {
-  const url = videoURL(raw);
-  const job = {id: Date.now(), phase: 'running', message: 'Abrindo vídeo…', url};
+  const url = videoURL(raw), playlist = isPlaylist(url);
+  const job = {id: Date.now(), phase: 'running', message: playlist ? 'Abrindo playlist…' : 'Abrindo vídeo…', url};
   const child = spawn(executable(root, 'yt-dlp'), downloadArgs(url, root, musicDir),
     {cwd: root, windowsHide: true, shell: false});
-  let file = '', tail = '', cancelled = false;
+  const files = []; let tail = '', cancelled = false;
   const notify = () => onUpdate(job);
   const consume = line => {
     tail = (tail + '\n' + line).slice(-4000);
     if (line.startsWith('RODA_FILE:')) {
       const resolved = path.resolve(line.slice(10).trim());
       if (path.dirname(resolved).toLowerCase() === musicDir.toLowerCase() && resolved.endsWith('.mp3')) {
-        file = path.basename(resolved);
+        files.push(path.basename(resolved));
+        // a primeira música da playlist já começa a tocar enquanto o resto baixa
+        if (playlist && files.length === 1) onComplete(files.slice(), true);
+        if (playlist) job.message = files.length + ' música(s) prontas · baixando o resto…';
       }
     } else if (line.trim()) {
       job.message = line.replace(/^\[[^\]]+\]\s*/, '').slice(0, 300);
@@ -65,7 +76,7 @@ export function startDownload(raw, {root, musicDir, onUpdate, onComplete}) {
       killer.on('error', () => child.kill());
     } else child.kill();
   };
-  const timer = setTimeout(cancel, 60 * 60 * 1000);
+  const timer = setTimeout(cancel, (playlist ? 4 : 1) * 60 * 60 * 1000);
   child.on('error', error => {
     clearTimeout(timer); job.phase = 'error';
     job.message = error.code === 'ENOENT' ? 'yt-dlp não encontrado. Instale as ferramentas de áudio.' : error.message;
@@ -75,10 +86,15 @@ export function startDownload(raw, {root, musicDir, onUpdate, onComplete}) {
     clearTimeout(timer);
     if (job.phase === 'error') return;
     if (cancelled) { job.phase = 'cancelled'; job.message = 'Download cancelado.'; }
-    else if (code === 0 && file && fs.existsSync(path.join(musicDir, file))) {
-      job.phase = 'done'; job.message = 'MP3 pronto · reprodução iniciada na live'; job.file = file;
-      onComplete(file);
-    } else { job.phase = 'error'; job.message = tail.slice(-1000) || 'O site não disponibilizou áudio para este vídeo.'; }
+    else {
+      const ready = files.filter(f => fs.existsSync(path.join(musicDir, f)));
+      // playlist com --ignore-errors sai com código 1 se algum vídeo falhar; o que baixou continua valendo
+      if (ready.length && (code === 0 || playlist)) {
+        job.phase = 'done'; job.file = ready[0]; job.files = ready;
+        job.message = playlist ? ready.length + ' música(s) na playlist · tocando em sequência' : 'MP3 pronto · reprodução iniciada na live';
+        if (!playlist) onComplete(ready, false);
+      } else { job.phase = 'error'; job.message = tail.slice(-1000) || 'O site não disponibilizou áudio para este vídeo.'; }
+    }
     notify();
   });
   return {job, cancel};

@@ -35,10 +35,8 @@ export function renderGiftCatalog(container, cards) {
   const icon = document.createElement('span');icon.className = 'gift-icon';
   const missing=()=>{icon.replaceChildren(document.createTextNode('?'));icon.classList.add('missing');};
   if (g.image) {const img = document.createElement('img');img.src = g.image;img.alt = g.name;img.referrerPolicy='no-referrer';img.onerror=missing;icon.append(img);}else missing();
-  const info = document.createElement('div'),action = document.createElement('strong'),name = document.createElement('span'),price = document.createElement('small');
-  action.textContent = g.action;name.textContent = g.name;
-  const coins=g.coins==null?'':g.coins+' '+(g.coins===1?'moeda':'moedas');
-  price.textContent = g.status === 'unavailable' ? 'Indisponível nesta live' : g.status === 'ambiguous' ? 'Ver painel' : coins;
-  info.append(action,name,price);card.append(icon,info);return card;
+  // Para o público: só o desenho do presente e o que ele faz (nome, preço e status ficam no painel).
+  const action = document.createElement('strong');action.textContent = g.action;
+  card.append(icon,action);return card;
  }));
 }

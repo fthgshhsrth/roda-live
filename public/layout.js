@@ -1,5 +1,13 @@
 export function overlaps(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
+// Nome fica colado acima da cabeça. Se o lugar estiver ocupado, some: nunca é empurrado para longe do dono.
+export function placeNameTag(anchor, w, h, obstacles, bounds) {
+ const minX=bounds.minX??10,maxX=bounds.maxX??bounds.width-10;
+ const box={x:Math.max(minX,Math.min(maxX-w,anchor.x-w/2)),y:anchor.y-h-4,w,h};
+ if(box.y<bounds.minY||box.y+h>bounds.maxY||obstacles.some(o=>overlaps(box,o)))return null;
+ return box;
+}
+
 export function placeProjectedBubble(anchor, w, h, obstacles, placed, bounds) {
  const margin = bounds.minX??10,right=bounds.maxX??bounds.width-10,step = Math.max(12, bounds.width * .025);
  if(w>right-margin)return null;

@@ -7,4 +7,31 @@ body{--safe-left:4%;--safe-right:28%}#viewport{inset:8% 25% 7% 0}.live-header{ri
 /* Browser/Link source: the 3D canvas uses the full source framebuffer. */
 .name-tag{font-size:clamp(10px,1.4vw,18px);padding:4px 7px}
 body.source-mode #viewport{inset:0}body.source-mode .live-header{top:3%;left:3%;right:3%;z-index:5}body.source-mode .live-header h1{font-size:clamp(18px,3.5vw,42px);letter-spacing:.04em}body.source-mode .scene-count{font-size:clamp(11px,1.8vw,22px)}body.source-mode .gift-sidebar{top:26%;right:2.5%;width:20%;max-width:250px;z-index:5}body.source-mode .gift-item{background:#181421d9;border-color:#dbc1ba35}body.source-mode .gift-item strong{font-size:clamp(10px,1.6vw,21px)}body.source-mode .gift-item small{font-size:clamp(8px,1.25vw,16px)}body.source-mode .gift-icon{width:clamp(26px,4.2vw,48px);height:clamp(26px,4.2vw,48px)}body.source-mode #windowTools{display:none}body.source-mode #eventToast{top:10%;left:6%;right:27%;z-index:6}
+/* Público: catálogo só com ícone + ação; nomes legíveis no celular; aviso de entrada chamativo. */
+.gift-sidebar .catalog-heading{display:none}
+body.source-mode .gift-sidebar .gift-item{display:flex;align-items:center;gap:10px;padding:7px 12px 7px 7px;border-radius:999px;background:#140f1ee0;border-color:#ffffff22}
+body.source-mode .gift-sidebar .gift-icon{width:clamp(30px,5.4vw,62px);height:clamp(30px,5.4vw,62px)}
+body.source-mode .gift-sidebar .gift-item strong{font-size:clamp(11px,2.05vw,24px);line-height:1.1;font-weight:800}
+.name-tag{font-size:clamp(11px,2.1vw,26px);padding:5px 12px;border-radius:999px;border-width:2px}
+.name-tag.camera-focus{background:#fff;border-color:#ff7fb6;box-shadow:0 0 18px #ff6fb0aa}
+body.source-mode #eventToast.entry-notice{left:5%;right:5%;top:9.5%;padding:.55em 1em;font-size:clamp(16px,4.4vw,52px);font-weight:900;white-space:normal;line-height:1.12;color:#fff;
+ background:linear-gradient(100deg,#ff2f7d,#a72cff);border:3px solid #ffffffb0;border-radius:999px;box-shadow:0 0 44px #ff4fa6b0,0 10px 30px #0007;text-shadow:0 2px 8px #0006}
+body.source-mode #eventToast{z-index:2500}
+body.source-mode #eventToast.entry-notice.visible{animation:noticePop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes noticePop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+@media(min-aspect-ratio:1/1){body.source-mode #eventToast.entry-notice{left:24%;right:24%;font-size:clamp(16px,2.5vw,46px)}}
 @media(min-aspect-ratio:1/1){body.source-mode .gift-sidebar{top:23%;width:16%;max-width:280px}body.source-mode .live-header h1{font-size:clamp(18px,2.2vw,40px)}body.source-mode .gift-item strong{font-size:clamp(11px,1.1vw,21px)}body.source-mode .gift-item small{font-size:clamp(9px,.8vw,15px)}body.source-mode #eventToast{left:25%;right:35%}}
+
+/* Catálogo à esquerda, sem fundo: só ícone + ação, com sombra para ler sobre a cena. (fica no fim para vencer as regras acima) */
+body.source-mode .gift-sidebar{left:3%;right:auto;width:auto;max-width:46%;top:24%}
+body.source-mode .gift-sidebar .gift-catalog{gap:2px}
+body.source-mode .gift-sidebar .gift-item{background:none;border:0;box-shadow:none;padding:3px 0;gap:10px}
+body.source-mode .gift-sidebar .gift-icon{filter:drop-shadow(0 2px 4px #000c)}
+body.source-mode .gift-sidebar .gift-icon img{background:none}
+body.source-mode .gift-sidebar .gift-item strong{white-space:nowrap;color:#fff;text-shadow:0 2px 4px #000,0 0 2px #000,0 0 10px #000a}
+
+/* Fundo transparente na live: título e contador com sombra para ler sobre qualquer câmera/fundo */
+body.transparent .live-header h1,body.transparent .scene-count{text-shadow:0 2px 6px #000,0 0 2px #000,0 0 12px #000a}
+
+/* Faixa vertical num link 1080×1032: a cena some suavemente em cima e embaixo, sem borda reta de retângulo no celular */
+body.source-mode.transparent #viewport{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 11%,#000 89%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 11%,#000 89%,transparent 100%)}

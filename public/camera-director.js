@@ -1,4 +1,5 @@
-export const CAMERA_TIMING=Object.freeze({overview:2200,random:2400,rose:2700,marry:3000,role:2700,groom:2700,return:1000,maxRose:4000});
+// Cada plano precisa durar mais que a transição (~1,5 s), senão a câmera só "pula" entre geral e close.
+export const CAMERA_TIMING=Object.freeze({overview:6000,random:3800,rose:4200,marry:4800,role:4200,groom:4200,return:1000,maxRose:6000});
 export class CameraDirector {
  constructor(now=0,random=Math.random){this.random=random;this.mode='overview';this.reason=null;this.targetId=null;this.event=null;this.startedAt=now;this.until=Infinity;this.nextRandomAt=now+CAMERA_TIMING.overview;this.token=0;this.queue=[];this.lastRandomId=null;}
  // New donations interrupt immediately; no queue of stale close-ups.

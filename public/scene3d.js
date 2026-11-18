@@ -1,6 +1,6 @@
 import * as THREE from '/vendor/three/three.module.js';
 import {makeRoach} from './roach.js';
-import {overlaps, placeProjectedBubble} from './layout.js';
+import {overlaps, placeNameTag, placeProjectedBubble} from './layout.js';
 import {CameraDirector, roseNotice} from './camera-director.js';
 import {sceneCast} from './party-layout.js';
 import {addBackstage} from './backstage.js';
@@ -13,7 +13,9 @@ import {addClubRoom} from './club-room.js';
 
 const $ = id => document.getElementById(id);
 const preview = new URLSearchParams(location.search).has('preview');
-const sourceMode=location.pathname.startsWith('/overlay/')||new URLSearchParams(location.search).has('source');
+// Tela cheia 1080×1920 é o padrão: o LIVE Studio cria o navegador em 1080×1920, mas quem cola só /overlay.html
+// (sem ?source=1) caía no layout de janela, com margens e 25% reservados à direita. Só a prévia do painel usa o antigo.
+const sourceMode=!preview||location.pathname.startsWith('/overlay/')||new URLSearchParams(location.search).has('source');
 document.body.classList.toggle('preview', preview);
 document.body.classList.toggle('source-mode',sourceMode);
 let state = {settings: {speed: 1, comments: true}, people: [], music: {}, log: []};
@@ -21,16 +23,18 @@ let offset = 0, elapsed = 0, frame = 0, lastTick = performance.now(), lastRender
 let high = new URLSearchParams(location.search).get('quality') !== 'low', toastUntil = 0, toastProtectedUntil = 0,resetUntil=0;
 $('quality').textContent = high ? 'Qualidade: Full HD' : 'Qualidade: leve';
 const audio = $('audio'), channel = new BroadcastChannel('roda-live-audio');
-const ownerId = crypto.randomUUID(); let audioOwner = false, audioKey = '', metadataKey = '';
+const ownerId = crypto.randomUUID(); let audioOwner = false, audioKey = '', metadataKey = '', audioRetry = 0;
 let audioContext, analyser, frequency;
 const send = (endpoint, data) => fetch('/api/' + endpoint, {method: 'POST',
   headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
 
-function claimAudio() { audioOwner = true; channel.postMessage({claim: ownerId}); }
+// A fonte Link do LIVE Studio (que recebe ?winName=) tem prioridade: abrir o overlay numa aba comum não rouba o som da live.
+const audioPriority = new URLSearchParams(location.search).has('winName') ? 2 : 1;
+function claimAudio() { audioOwner = true; channel.postMessage({claim: ownerId, priority: audioPriority}); }
 channel.onmessage = e => {
-  if (e.data.claim && e.data.claim !== ownerId && audioOwner) {
-    audioOwner = false; audio.pause(); $('enable').hidden = false;
-  }
+  if (!e.data.claim || e.data.claim === ownerId || !audioOwner) return;
+  if ((e.data.priority || 1) < audioPriority) { channel.postMessage({claim: ownerId, priority: audioPriority}); return; }
+  audioOwner = false; audio.pause(); $('enable').hidden = false;
 };
 if (preview) { audio.muted = true; $('enable').hidden = true; } else claimAudio();
 function initializeAnalyser() {
@@ -54,7 +58,8 @@ async function synchronizeAudio() {
   }
   if (m.playing) {
     try { await audio.play(); $('enable').hidden = true; }
-    catch { $('enable').hidden = false; }
+    catch { $('enable').hidden = false; // no LIVE Studio não há botão para clicar: tenta de novo sozinho
+      if (sourceMode && !audioRetry) audioRetry = setTimeout(() => { audioRetry = 0; void synchronizeAudio(); }, 2000); }
   } else audio.pause();
 }
 audio.onloadedmetadata = () => {
@@ -79,12 +84,13 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.35;
 renderer.shadowMap.enabled = !preview; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-const clubRoom=addClubRoom(scene);clubRoom.visible=sourceMode;
+const clubRoom=addClubRoom(scene);clubRoom.visible=false;document.body.classList.toggle('transparent',sourceMode);
 const camera = new THREE.PerspectiveCamera(38, 1, .1, 180);
 let director = new CameraDirector(performance.now());
 const overviewPosition = new THREE.Vector3(), overviewAim = new THREE.Vector3(0, 1, -2.5);
 const cameraAim = overviewAim.clone(), desiredCamera = new THREE.Vector3(), desiredAim = new THREE.Vector3();
 let cameraInitialized = false, shot = director.update(performance.now(), []), shownShot = -1;
+const cameraFrom={token:shot.token,position:new THREE.Vector3(),aim:new THREE.Vector3(),time:-1e9};
 scene.add(new THREE.HemisphereLight('#e4c3ff', '#24132b', 2.3));
 const keyLight = new THREE.DirectionalLight('#ffe3bb', 4.5); keyLight.position.set(-6, 12, 10);
 keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024);
@@ -126,8 +132,12 @@ const weddingDecor=addWeddingDecor(scene);
 let viewport = {width: 1, height: 1, top: 0, left: 0};
 const danceLayout=new SpiralLayout();
 function frameOverview(){
-  const radius=danceLayout.radius,distance=Math.max(34,(radius+2.5)*3.1,(radius+2.5)*3.1/camera.aspect);
-  overviewAim.set(0,1,-radius*.12);overviewPosition.set(1,distance*.64,distance*.83-radius*.12);
+  // Janela quase quadrada (link do LIVE Studio, 1080×1032): aproxima para a roda ocupar a largura toda da tela do celular.
+  const square=camera.aspect>.9&&camera.aspect<1.3,fit=square?2.7:3.1;
+  const radius=danceLayout.radius,distance=Math.max(square?29:34,(radius+2.5)*fit,(radius+2.5)*fit/camera.aspect);
+  // Vertical: câmera mais alta (≈50°) para a pista redonda ocupar a altura da tela em vez de sobrar chão vazio.
+  const tall=Math.min(1,Math.max(0,(1-camera.aspect)/.45)),up=.64+.12*tall,back=.83-.18*tall;
+  overviewAim.set(0,1,-radius*.12);overviewPosition.set(1,distance*up,distance*back-radius*.12);
   camera.far=Math.max(180,radius*14+120);camera.updateProjectionMatrix();
 }
 function resize() {
@@ -198,8 +208,9 @@ function updateState(next) {
     director=new CameraDirector(performance.now());shownShot=-1;shot=director.update(performance.now(),[]);toastProtectedUntil=0;
   }
   state = next; offset = next.serverTime - Date.now(); $('offline').hidden = true;
-  document.body.classList.toggle('transparent', !!next.settings.transparent);
-  clubRoom.visible=sourceMode&&!next.settings.transparent;
+  // Fonte Link: fundo sempre transparente (sem parede/salão), só a festa aparece — igual ao overlay de referência.
+  const transparent=sourceMode||!!next.settings.transparent;
+  document.body.classList.toggle('transparent', transparent);
   const defaultTitle = !next.settings.title || next.settings.title === 'A RODA É SUA';
   $('sceneTitle').textContent = defaultTitle ? 'ARRAIÁ DAS BARATAS' : next.settings.title;
   $('sceneSubtitle').textContent = next.settings.subtitle === 'Mande uma rosa e entre na roda!' ? 'Uma rosa. Uma barata. Um show à parte.' : next.settings.subtitle;
@@ -257,10 +268,13 @@ function moveCamera(time, dt, entries) {
     }
   }
   const motion=time/1000;
-  desiredCamera.x+=Math.sin(motion*.65)*(shot.mode==='overview'?danceLayout.radius*.18:.45);
+  desiredCamera.x+=Math.sin(motion*.65)*(shot.mode==='overview'?danceLayout.radius*(camera.aspect<1?.05:.18):.45); // no vertical a tela é estreita: balanço grande corta a roda
   desiredCamera.y+=Math.sin(motion*.8)*.3;desiredCamera.z+=Math.cos(motion*.5)*.5;
-  const blend = 1 - Math.exp(-dt * 6);
-  camera.position.lerp(desiredCamera, blend); cameraAim.lerp(desiredAim, blend); camera.lookAt(cameraAim);
+  // Zoom suave só na troca de plano (1,4 s, entrada e saída suaves); depois a câmera segue o alvo exatamente,
+  // senão ela fica para trás de quem está dançando na roda e a pessoa sai do quadro.
+  if(cameraFrom.token!==shot.token){cameraFrom.token=shot.token;cameraFrom.position.copy(camera.position);cameraFrom.aim.copy(cameraAim);cameraFrom.time=time;}
+  const k=Math.min(1,(time-cameraFrom.time)/1400),ease=k*k*(3-2*k);
+  camera.position.copy(cameraFrom.position).lerp(desiredCamera,ease);cameraAim.copy(cameraFrom.aim).lerp(desiredAim,ease);camera.lookAt(cameraAim);
   if (shownShot !== shot.token) {
     shownShot = shot.token;
     for (const entry of entries) entry.name.classList.toggle('camera-focus', entry.person.id === shot.targetId);
@@ -270,29 +284,40 @@ let projected = [], bubbleBoxes = [];
 function labelLayout(entries, now) {
   const w = innerWidth, h = innerHeight, obstacles = [], active = [],visibleEntries=[];
   const header=$('sceneTitle').getBoundingClientRect();
-  const bounds={width:w,minX:viewport.left+10,maxX:sourceMode?document.querySelector('.gift-sidebar').getBoundingClientRect().left-10:viewport.right-10,minY:header.bottom+16,maxY:viewport.bottom-15};
+  const bounds={width:w,minX:viewport.left+10,maxX:viewport.right-10,minY:header.bottom+16,maxY:viewport.bottom-15};
   if(Date.now()<toastUntil){const r=$('eventToast').getBoundingClientRect();obstacles.push({x:r.x-4,y:r.y-4,w:r.width+8,h:r.height+8});}
+  if(sourceMode){const s=document.querySelector('.gift-sidebar').getBoundingClientRect();obstacles.push({x:s.x-6,y:s.y-6,w:s.width+12,h:s.height+12});}
+  const heads=[];
   for (const entry of entries) {
-    const root = entry.model.root, scale = root.scale.x;
-    const head = project(root.position.x,root.position.y+3.5 * scale + entry.model.dancer.position.y, root.position.z);
-    const feet = project(root.position.x,root.position.y,root.position.z);
+    const root = entry.model.root, scale = root.scale.x, x=root.position.x, y=root.position.y+entry.model.dancer.position.y, z=root.position.z;
+    const head = project(x, y+2.75*scale, z); // logo acima da cabeça, entre as antenas
+    const feet = project(x,root.position.y,z);
     entry.bubble.hidden = true; entry.line.style.display = 'none';
     const visible = head.visible && feet.visible && feet.x > viewport.left && feet.x < viewport.right && feet.y > viewport.top && head.y < viewport.bottom;
     entry.name.hidden = true;
     if (!visible) continue;
-    const left = project(root.position.x - 1.1 * scale,root.position.y+1.3, root.position.z);
-    const right = project(root.position.x + 1.1 * scale,root.position.y+1.3, root.position.z);
+    const left = project(x - 1.1 * scale,root.position.y+1.3, z);
+    const right = project(x + 1.1 * scale,root.position.y+1.3, z);
     const body = {x: left.x - 5, y: head.y - 5, w: right.x - left.x + 10, h: feet.y - head.y + 32};
+    const top=project(x,y+2.45*scale,z),chin=project(x,y+1.85*scale,z),hl=project(x-.32*scale,y+2.15*scale,z),hr=project(x+.32*scale,y+2.15*scale,z);
+    entry.headBox={x:Math.min(hl.x,hr.x),y:top.y,w:Math.abs(hr.x-hl.x),h:chin.y-top.y};heads.push(entry.headBox);
+    entry.depth=camera.position.distanceTo(root.position);
     obstacles.push(body); entry.anchor = {x: head.x, y: head.y};
     visibleEntries.push(entry);
     if (state.settings.comments && entry.person.commentUntil > now && entry.person.comment) active.push(entry);
   }
-  const placed = [],named=visibleEntries.filter(e=>e.person.donor);
-  named.sort((a,b)=>Number(b.person.id===shot.targetId)-Number(a.person.id===shot.targetId));
+  // Nomes: o focado primeiro, depois os mais próximos da câmera; cada um só aparece acima da própria cabeça.
+  const placed = [],named=visibleEntries.filter(e=>e.person.donor),names=[];
+  named.sort((a,b)=>Number(b.person.id===shot.targetId)-Number(a.person.id===shot.targetId)||a.depth-b.depth);
+  const ui=[];if(sourceMode){const s=document.querySelector('.gift-sidebar').getBoundingClientRect();ui.push({x:s.x-6,y:s.y-6,w:s.width+12,h:s.height+12});}
+  if(Date.now()<toastUntil){const r=$('eventToast').getBoundingClientRect();ui.push({x:r.x-4,y:r.y-4,w:r.width+8,h:r.height+8});}
+  const nameBounds={...bounds,maxX:viewport.right-10};
   for(const entry of named){
     const name=entry.name;name.hidden=false;
-    const box=placeProjectedBubble(entry.anchor,name.offsetWidth,name.offsetHeight,obstacles,[],bounds);
-    if(box){name.style.left=box.x+'px';name.style.top=box.y+'px';name.style.zIndex='1900';obstacles.push(box);}else name.hidden=true;
+    const focused=entry.person.id===shot.targetId;
+    const blockers=focused?[...ui,...names]:[...ui,...names,...heads.filter(h=>h!==entry.headBox)];
+    const box=placeNameTag(entry.anchor,name.offsetWidth,name.offsetHeight,blockers,nameBounds);
+    if(box){name.style.left=box.x+'px';name.style.top=box.y+'px';name.style.zIndex='1900';names.push({x:box.x-3,y:box.y-3,w:box.w+6,h:box.h+6});obstacles.push(box);}else name.hidden=true;
   }
   for (const entry of active.sort((a, b) => b.person.commentUntil - a.person.commentUntil).slice(0,2)) {
     const bubble = entry.bubble,author=document.createElement('strong');author.textContent=entry.person.name;
@@ -337,7 +362,7 @@ function draw(time) {
   $('eventToast').classList.toggle('visible', Date.now() < toastUntil);
   $('finale').hidden=Date.now()>=resetUntil;document.body.classList.toggle('party-reset',Date.now()<resetUntil);
 }
-window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls,
+window.roda3D = {renderer, scene, camera, characters, diagnostics: () => ({frames: frame, calls: renderer.info.render.calls, audioOwner,
   spiralRadius:danceLayout.radius,
   renderWidth:renderer.domElement.width,renderHeight:renderer.domElement.height,
   visibleNames:[...characters.values()].filter(e=>!e.name.hidden).length,

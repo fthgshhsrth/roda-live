@@ -4,25 +4,29 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {startDownload, executable as toolPath} from './media.js';
-import {activate, control} from './music.js';
-import {fresh,defaults,gift,giftPrice,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
+import {activate, control, library} from './music.js';
+import {fresh,defaults,gift,comment,prune,settings,upgradeState,clearParty,removePerson} from './wheel.js';
 import {sanitizeGifts,resolveGiftCatalog,catalogRules} from './public/gift-catalog.js';
 import {createPublicSource} from './source-link.js';
+import {giftId,giftName,giftPrice as readGiftPrice,liveOptions} from './party.js';
 const ROOT=path.dirname(fileURLToPath(import.meta.url)),PUB=path.join(ROOT,'public'),MUSIC=path.join(ROOT,'music'),DATA=process.env.RODA_DATA_DIR?path.resolve(process.env.RODA_DATA_DIR):path.join(ROOT,'data');
 fs.mkdirSync(MUSIC,{recursive:true});fs.mkdirSync(DATA,{recursive:true});
 const stateFile=path.join(DATA,'state.json');let state=fresh();try{const saved=JSON.parse(fs.readFileSync(stateFile));state={...state,...saved,settings:{...defaults,...saved.settings}};state.schemaVersion=saved.schemaVersion||0;state.music.playing=false;}catch{}
 upgradeState(state);
 let audioReady=false, activeDownload=null;
 state.music.queue=[];state.music.revision=state.music.revision||0;state.music.duration=state.music.duration||0;
+// Faixa salva que não existe mais no disco (pasta music/ copiada sem os MP3) deixava a cena muda.
+if(state.music.file&&!library(MUSIC).includes(state.music.file)){const first=library(MUSIC)[0];if(first){activate(state.music,first);state.music.playing=false;}else Object.assign(state.music,{file:null,playing:false,position:0,duration:0});}
 const clients=new Set();let live=null,epoch=0,status={phase:'offline',message:'Modo local · simulador disponível'},jobs=[];
 const port=Number(process.env.PORT)||3000;
 let viewRevision=0;const stateWaiters=new Set();
 const publicSource=createPublicSource({root:ROOT,assetPort:port,getSnapshot:snapshot,onChange:send,
- onMusic:b=>{control(state.music,b);send();save();}});
+ onMusic:b=>{control(state.music,b,Date.now(),library(MUSIC));send();save();}});
 let availableGifts=[],catalogStatus='offline';
 const giftCatalog=()=>resolveGiftCatalog(state.settings.rules,availableGifts,catalogStatus);
 async function loadGiftCatalog(conn=live,ticket=epoch){
  if(!conn||status.phase!=='online')throw Error('Conecte uma live para carregar os presentes disponíveis.');
+ if(!process.env.EULER_API_KEY)throw Error('A lista completa de presentes da sala exige o plano Business da Euler Stream (EULER_API_KEY). Sem ela os presentes funcionam normalmente pelo nome e preço de cada evento.');
  catalogStatus='loading';send();
  try{
   const gifts=sanitizeGifts(conn.availableGifts?.length?conn.availableGifts:await conn.fetchAvailableGifts());
@@ -32,8 +36,10 @@ async function loadGiftCatalog(conn=live,ticket=epoch){
  }catch(e){if(conn===live&&ticket===epoch){catalogStatus='error';availableGifts=[];send();}throw e;}
 }
 function save(){fs.writeFileSync(stateFile,JSON.stringify(state,null,2));}
-function currentTrack(){const file=state.music.file;return file?{file,title:file.replace(/\s*\[[^\]]+\]\.mp3$/,'').replace(/\.mp3$/,''),url:'/music/'+encodeURIComponent(file)}:null;}
-function snapshot(){prune(state);return {...state,revision:viewRevision,status,jobs,sourceLink:publicSource.status(),giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),serverTime:Date.now(),audioReady:!!audioReady};}
+const trackTitle=file=>file.replace(/\s*\[[^\]]+\]\.mp3$/,'').replace(/\.mp3$/,'');
+function currentTrack(){const file=state.music.file;return file?{file,title:trackTitle(file),url:'/music/'+encodeURIComponent(file)}:null;}
+function snapshot(){prune(state);return {...state,revision:viewRevision,status,jobs,sourceLink:publicSource.status(),giftCatalog:giftCatalog(),catalogStatus,track:currentTrack(),
+ tracks:library(MUSIC).map(file=>({file,title:trackTitle(file)})),serverTime:Date.now(),audioReady:!!audioReady};}
 function send(visual=true){
  if(visual){viewRevision++;for(const reply of [...stateWaiters])reply();publicSource.notify();}
  const data='data: '+JSON.stringify(snapshot())+'\n\n';for(const res of clients)res.write(data);
@@ -46,18 +52,25 @@ async function connect(username){
  try{
  const mod=await import('tiktok-live-connector');if(ticket!==epoch)return;
  const Connection=mod.TikTokLiveConnection||mod.WebcastPushConnection;
- const conn=new Connection(username,{enableExtendedGiftInfo:true,processInitialData:false,...(process.env.EULER_API_KEY?{signApiKey:process.env.EULER_API_KEY}:{})});live=conn;
+ // A lista de presentes da sala (gift/list) exige assinatura paga da Euler (plano Business). Com
+ // enableExtendedGiftInfo o connect() inteiro falhava. Nome e preço já chegam em cada presente pelo WebSocket gratuito.
+ const conn=new Connection(username,liveOptions(process.env.EULER_API_KEY));live=conn;
  conn.on('gift',e=>{if(ticket!==epoch)return;
-  const known=availableGifts.find(g=>g.id===String(e.giftId));
-  const ev=gift(state,{...e,diamondCount:giftPrice(e)??known?.coins,
-   giftName:e.giftName||e.giftDetails?.giftName||e.extendedGiftInfo?.name||e.gift?.name||known?.name},Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
+  const id=giftId(e),known=availableGifts.find(g=>g.id===String(id));
+  const ev=gift(state,{...e,giftId:id,diamondCount:readGiftPrice(e)??known?.coins,
+   giftName:giftName(e)||known?.name,
+   repeatCount:e.repeatCount??e.giftDetails?.repeatCount??e.gift?.repeatCount??e.gift?.repeat_count??1,
+   repeatEnd:e.repeatEnd??e.giftDetails?.repeatEnd??e.gift?.repeatEnd??e.gift?.repeat_end??true,
+   giftType:e.giftType??e.giftDetails?.giftType??e.gift?.giftType??e.gift?.gift_type},
+   Date.now(),catalogStatus==='ready'?catalogRules(state.settings.rules,giftCatalog()):state.settings.rules);
   if(ev){if(ev.effect==='reset'&&!ev.progress)activeDownload?.cancel();send();save();}});
  conn.on('chat',e=>{if(ticket===epoch&&comment(state,e))send();});
  conn.on('error',()=>{if(ticket===epoch)setStatus('error','Erro de conexão. Verifique a live e o provedor de assinatura.');});
  conn.on('disconnected',()=>{if(ticket===epoch){epoch++;live=null;availableGifts=[];catalogStatus='offline';setStatus('offline','Conexão encerrada. Clique em Conectar para tentar novamente.');}});
  conn.on('streamEnd',()=>{if(ticket===epoch)disconnect();});
  await conn.connect();if(ticket!==epoch){conn.disconnect();return;}setStatus('online','Ao vivo com @'+username);
- try{await loadGiftCatalog(conn,ticket);}catch{ /* The panel exposes a retry; metadata-based matching remains available. */ }
+ // Sem chave Euler o catálogo da sala não está disponível: segue com nome/preço de cada evento e as imagens do projeto.
+ if(process.env.EULER_API_KEY){try{await loadGiftCatalog(conn,ticket);}catch{ /* The panel exposes a retry; metadata-based matching remains available. */ }}
  }catch(e){if(ticket===epoch)setStatus('error','Não foi possível conectar: '+String(e.message).slice(0,180));}
 }
 function tool(name){return toolPath(ROOT,name);}
@@ -66,7 +79,9 @@ function download(raw){
  const epoch=state.partyEpoch;
  activeDownload=startDownload(raw,{root:ROOT,musicDir:MUSIC,
  onUpdate:()=>send(false),
- onComplete:file=>{if(epoch!==state.partyEpoch)return;activate(state.music,file);save();}});
+ // playlist: se já há música tocando, as novas só entram na fila; send() visual acorda o overlay do LIVE Studio
+ onComplete:(files,playlist)=>{if(epoch!==state.partyEpoch)return;
+  if(!(playlist&&state.music.playing&&library(MUSIC).includes(state.music.file)))activate(state.music,files[0]);save();send();}});
  jobs.unshift(activeDownload.job);jobs=jobs.slice(0,8);send();
 }
 async function body(req){let text='';for await(const chunk of req){text+=chunk;if(text.length>65536)throw Error('Requisição muito grande');}return text?JSON.parse(text):{};}
@@ -89,7 +104,7 @@ const server=http.createServer(async(req,res)=>{
  case '/api/clear':clearParty(state);activeDownload?.cancel();break;
  case '/api/download':download(String(b.url||''));break;
  case '/api/download/cancel':activeDownload?.cancel();break;
- case '/api/music':control(state.music,b);break;
+ case '/api/music':control(state.music,b,Date.now(),library(MUSIC));break;
  case '/api/source-link':await publicSource.start();break;
  case '/api/source-link/stop':publicSource.stop();break;
  default:json(res,404,{error:'Endpoint desconhecido'});return;

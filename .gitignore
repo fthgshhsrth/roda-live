@@ -10,3 +10,4 @@ music/*
 *.log
 Thumbs.db
 .DS_Store
+graphify-out/

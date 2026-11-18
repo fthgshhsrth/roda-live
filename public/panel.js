@@ -26,7 +26,7 @@ function renderRules(){
   const effectCell=el('td'),select=el('select');Object.entries(effects).forEach(([value,label])=>{const o=el('option',label);o.value=value;select.append(o);});select.value=r.effect;select.onchange=()=>r.effect=select.value;effectCell.append(select);tr.append(effectCell);$('ruleRows').append(tr);
  });
 }
-let peopleKey='',logKey='',jobKey='',giftKey='';
+let peopleKey='',logKey='',jobKey='',giftKey='',playlistKey='';
 function render(s){
  state=s;const ready=document.getElementById('audioStatus');if(ready){ready.textContent=s.audioReady?'● Downloader pronto · yt-dlp + FFmpeg':'○ Downloader precisa de yt-dlp + FFmpeg · veja INSTALAR-AUDIO.ps1';ready.style.color=s.audioReady?'#d6fb79':'#dab67a';}if(!settingsLoaded)loadSettings(s.settings);
  renderSource();
@@ -37,6 +37,9 @@ function render(s){
  const gk=JSON.stringify(s.settings.rules);if(gk!==giftKey){giftKey=gk;$('giftButtons').replaceChildren(...s.settings.rules.map(r=>button(r.icon+' '+r.label,()=>api('simulate',{user:$('testUser').value.trim()||'Visitante',giftName:r.names.split(',')[0],giftId:r.ids.split(',')[0],coins:r.coins,count:1}))));}
  const pk=JSON.stringify([s.couple,s.stage,s.people.map(p=>[p.id,p.name,p.roses,p.expires])]);if(pk!==peopleKey){peopleKey=pk;$('participants').replaceChildren();s.people.forEach(p=>{const row=el('div',undefined,'person-row'),avatar=el('span',p.name[0],'avatar');avatar.style.background='hsl('+p.color+' 65% 70%)';const info=el('span',p.name);info.append(el('small',(partyRole(s,p.id)?partyRole(s,p.id).label+' · ':'')+'🌹 '+p.roses+' · @'+p.id));row.append(avatar,info,button('Remover',()=>api('remove',{id:p.id})));$('participants').append(row);});if(!s.people.length)$('participants').append(el('p','A roda está esperando a primeira rosa.','empty'));}
  const ek=JSON.stringify(s.log);if(ek!==logKey){logKey=ek;$('log').replaceChildren(...s.log.slice(0,15).map(e=>{const row=el('div',undefined,'log-item');row.append(el('span',e.icon),el('span',e.message),el('time',new Date(e.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})));return row;}));}
+ const listKey=JSON.stringify([s.tracks,s.music.file]);if(listKey!==playlistKey){playlistKey=listKey;$('playlist').replaceChildren(...(s.tracks||[]).map(t=>{
+  const li=el('li',(t.file===s.music.file?'♫ ':'')+t.title,t.file===s.music.file?'current':'');li.title='Tocar agora';li.onclick=action(()=>api('music',{action:'select',file:t.file}));return li;}));
+  if(!s.tracks?.length)$('playlist').append(el('li','Nenhuma música baixada ainda','empty'));}
  const jk=JSON.stringify(s.jobs);if(jk!==jobKey){jobKey=jk;$('downloads').replaceChildren(...s.jobs.slice(0,3).map(j=>el('div',(j.phase==='error'?'⚠ ':j.phase==='done'?'✓ ':'↓ ')+j.message,'download-job')));const busy=s.jobs.some(j=>j.phase==='running');$('downloadButton').disabled=busy;$('cancelDownload').hidden=!busy;}
  const m=s.music;$('nowPlaying').textContent=s.track?.title||'Cole um link para começar';$('playState').textContent=m.playing?'Reproduzindo na live':m.file?'Pausado':'Aguardando áudio';
  if(document.activeElement!==$('volume'))$('volume').value=Math.round(m.volume*100);$('volumeValue').value=Math.round(m.volume*100)+'%';
@@ -52,7 +55,7 @@ $('settingsForm').onsubmit=action(async()=>{const b={};for(const k of ['title','
 $('saveRules').onclick=action(async()=>{await api('settings',{rules});toast('Mapa de presentes salvo');});
 $('clear').onclick=action(async()=>{if(confirm('Limpar participantes, rosas e histórico desta sessão?'))await api('clear');});
 $('downloadForm').onsubmit=action(async()=>{await api('download',{url:$('videoURL').value});toast('Download iniciado. O MP3 tocará automaticamente na cena.');});
-for(const id of ['play','pause','stop'])$(id).onclick=action(()=>api('music',{action:id}));
+for(const id of ['play','pause','stop','prev','next'])$(id).onclick=action(()=>api('music',{action:id}));
 $('volume').oninput=()=>{$('volumeValue').value=$('volume').value+'%';};$('volume').onchange=action(()=>api('music',{action:'volume',value:Number($('volume').value)/100}));
 $('seek').onchange=action(()=>api('music',{action:'seek',value:Number($('seek').value)}));
 
